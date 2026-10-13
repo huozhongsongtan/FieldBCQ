@@ -1,41 +1,23 @@
-"""Evaluate the eight paper-stage checkpoints sequentially on one test split."""
+"""Evaluate the four archived checkpoints sequentially on one test split."""
 
 from __future__ import annotations
 
 import argparse
 import gc
 import json
-import os
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
-# Keep Ultralytics settings in a writable server directory before importing it.
-os.environ.setdefault(
-    "YOLO_CONFIG_DIR",
-    "/home/root1/projects/students/lzw/per_image_validation_ultralytics/_ultralytics_config",
-)
+from project_paths import project_path, relative_path
 
 from ultralytics import YOLO
 
 
 DEFAULT_MODELS: List[Tuple[str, Path]] = [
-    ("round1_exp3", Path("/home/root1/projects/students/lzw/实验结果/一轮/exp3/weights/best.pt")),
-    (
-        "round1_boundary_dice",
-        Path("/home/root1/projects/students/lzw/实验结果/一轮/exp_BoundaryDice/weights/best.pt"),
-    ),
-    (
-        "round1_bas_boundary_dice",
-        Path("/home/root1/projects/students/lzw/实验结果/一轮/exp_BAS_BoundaryDice/weights/best.pt"),
-    ),
-    (
-        "round1_bas_btq_fusion",
-        Path("/home/root1/projects/students/lzw/实验结果/一轮/bas_btq_fusion/f1_bas_mqc_seed0/weights/best.pt"),
-    ),
-    ("round2_exp", Path("/home/root1/projects/students/lzw/实验结果/二轮/exp/weights/best.pt")),
-    ("round2_a", Path("/home/root1/projects/students/lzw/实验结果/二轮/a_seed0/weights/best.pt")),
-    ("round2_ab", Path("/home/root1/projects/students/lzw/实验结果/二轮/ab_seed0/weights/best.pt")),
-    ("round2_abc", Path("/home/root1/projects/students/lzw/实验结果/二轮/abc_seed0/weights/best.pt")),
+    ("baseline", Path("model/baseline/best.pt")),
+    ("a", Path("model/a/best.pt")),
+    ("ab", Path("model/ab/best.pt")),
+    ("abc", Path("model/abc/best.pt")),
 ]
 
 
@@ -48,21 +30,21 @@ def parse_args() -> argparse.Namespace:
         metavar="NAME=WEIGHTS",
         help="Override the defaults; repeat for multiple models. A bare path is also accepted.",
     )
-    parser.add_argument("--data", default="dataset/datasets.yaml")
+    parser.add_argument("--data", default="data/datasets.yaml")
     parser.add_argument("--split", default="test", choices=("val", "test"))
     parser.add_argument("--batch", type=int, default=8)
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--device", default=None)
     parser.add_argument("--max-det", type=int, default=710)
-    parser.add_argument("--project", default="runs/paper_test")
+    parser.add_argument("--project", default="results/runs")
     parser.add_argument("--name", default=None, help="Optional prefix for each model's validation run name.")
     return parser.parse_args()
 
 
 def parse_models(values: Optional[Sequence[str]]) -> List[Tuple[str, Path]]:
     if not values:
-        return list(DEFAULT_MODELS)
+        return [(name, project_path(path)) for name, path in DEFAULT_MODELS]
 
     models = []
     names = set()
@@ -72,13 +54,13 @@ def parse_models(values: Optional[Sequence[str]]) -> List[Tuple[str, Path]]:
             name, raw_path = name.strip(), raw_path.strip()
         else:
             raw_path = value.strip()
-            name = Path(raw_path).parent.parent.name
+            name = Path(raw_path).parent.name
         if not name or not raw_path:
             raise ValueError("--weights must use NAME=WEIGHTS or a non-empty checkpoint path")
         if name in names:
             raise ValueError("Duplicate model name: {}".format(name))
         names.add(name)
-        models.append((name, Path(raw_path).expanduser()))
+        models.append((name, project_path(raw_path)))
     return models
 
 
@@ -103,7 +85,7 @@ def paper_metrics(results) -> dict:
 def main() -> None:
     args = parse_args()
     models = parse_models(args.weights)
-    project = Path(args.project).expanduser().resolve()
+    project = project_path(args.project)
     project.mkdir(parents=True, exist_ok=True)
 
     all_metrics = []
@@ -111,11 +93,11 @@ def main() -> None:
         if not weights.is_file():
             raise FileNotFoundError("Model weights not found: {}".format(weights))
 
-        print("\n[{}/{}] {} -> {}".format(index, len(models), model_name, weights), flush=True)
+        print("\n[{}/{}] {} -> {}".format(index, len(models), model_name, relative_path(weights)), flush=True)
         model = YOLO(str(weights))
         run_name = "{}_{}".format(args.name, model_name) if args.name else model_name
         val_args = {
-            "data": args.data,
+            "data": str(project_path(args.data)),
             "split": args.split,
             "batch": args.batch,
             "imgsz": args.imgsz,
@@ -133,9 +115,9 @@ def main() -> None:
         metrics = paper_metrics(results)
         record = {
             "model": model_name,
-            "weights": str(weights),
+            "weights": relative_path(weights),
             "run_name": run_name,
-            "data": str(args.data),
+            "data": relative_path(project_path(args.data)),
             "split": args.split,
             "metrics": metrics,
         }
@@ -143,7 +125,7 @@ def main() -> None:
 
         output = Path(results.save_dir) / "paper_metrics.json"
         output.write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
-        print("Paper metrics saved to: {}".format(output), flush=True)
+        print("Paper metrics saved to: {}".format(relative_path(output)), flush=True)
 
         summary = project / "paper_metrics_all.json"
         summary.write_text(json.dumps(all_metrics, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -151,7 +133,7 @@ def main() -> None:
         del model
         gc.collect()
 
-    print("\nAll model metrics saved to: {}".format(project / "paper_metrics_all.json"), flush=True)
+    print("\nAll model metrics saved to: {}".format(relative_path(project / "paper_metrics_all.json")), flush=True)
 
 
 if __name__ == "__main__":

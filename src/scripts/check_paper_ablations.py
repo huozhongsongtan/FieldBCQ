@@ -2,6 +2,8 @@
 
 import argparse
 
+from project_paths import project_path
+
 import torch
 from ultralytics import YOLO
 from ultralytics.cfg import get_cfg
@@ -27,7 +29,7 @@ def parse_args():
 def main():
     args = parse_args()
     for stage_name, (expected_head, expected_loss) in EXPECTED.items():
-        model = YOLO(STAGES[stage_name]["model"])
+        model = YOLO(str(project_path("src") / STAGES[stage_name]["model"]))
         core = model.model
         core.args = get_cfg(overrides={**core.args, **STAGES[stage_name]["overrides"]})
         head_name = type(core.model[-1]).__name__

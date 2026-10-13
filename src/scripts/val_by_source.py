@@ -15,6 +15,8 @@ import os
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence
 
+from project_paths import project_path, relative_path
+
 import yaml
 from ultralytics import YOLO
 
@@ -27,7 +29,7 @@ def parse_args():
         description="Evaluate a fixed segmentation checkpoint on DDFHAPD/FBIS/FTW test subsets."
     )
     parser.add_argument("--weights", required=True)
-    parser.add_argument("--data", default="dataset/datasets.yaml")
+    parser.add_argument("--data", default="data/datasets.yaml")
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=8)
     parser.add_argument("--workers", type=int, default=8)
@@ -51,7 +53,7 @@ def parse_args():
         metavar="NAME=TOKEN",
         help="Add or override a source token, for example --source-token china=CQ.",
     )
-    parser.add_argument("--project", default="runs/source_eval")
+    parser.add_argument("--project", default="results/source_eval")
     parser.add_argument("--name", default="best_model")
     parser.add_argument("--conf", type=float, default=0.001)
     parser.add_argument("--max-det", type=int, default=300)
@@ -66,7 +68,7 @@ def parse_args():
 
 
 def _resolve_root(data_path: Path, config: dict) -> Path:
-    raw_root = os.path.expandvars(str(config.get("path", data_path.parent)))
+    raw_root = os.path.expandvars(str(config.get("path") or "."))
     root = Path(raw_root).expanduser()
     return (data_path.parent / root).resolve() if not root.is_absolute() else root.resolve()
 
@@ -94,7 +96,7 @@ def _expand_entry(entry, root: Path) -> List[Path]:
 
 
 def resolve_images(data: str, split: str) -> tuple[Path, dict, List[Path]]:
-    data_path = Path(data).expanduser().resolve()
+    data_path = project_path(data)
     with data_path.open("r", encoding="utf-8") as handle:
         config = yaml.safe_load(handle) or {}
     root = _resolve_root(data_path, config)
@@ -154,12 +156,25 @@ def write_group_data(
     data_paths = {}
     for name, images in groups.items():
         list_path = output_dir / "{}_images.txt".format(name)
-        list_path.write_text("\n".join(str(path) for path in images) + "\n", encoding="utf-8")
+        # Ultralytics anchors entries beginning with ./ to the image-list file.
+        list_path.write_text(
+            "\n".join("./" + relative_path(path, output_dir) for path in images) + "\n",
+            encoding="utf-8",
+        )
         group_config = dict(base_config)
-        # Keep train/val because check_det_dataset requires them even for test evaluation.
-        # Make path absolute so relative entries keep the original dataset semantics.
-        group_config["path"] = str(dataset_root)
-        group_config["test"] = str(list_path)
+        # Omitting path makes the generated YAML's directory its dataset root.
+        group_config.pop("path", None)
+        for split in ("train", "val", "minival"):
+            entries = base_config.get(split)
+            if not entries:
+                continue
+            values = entries if isinstance(entries, list) else [entries]
+            paths = [
+                relative_path(dataset_root / Path(os.path.expandvars(str(entry))).expanduser(), output_dir)
+                for entry in values
+            ]
+            group_config[split] = paths if isinstance(entries, list) else paths[0]
+        group_config["test"] = list_path.name
         yaml_path = output_dir / "{}_data.yaml".format(name)
         with yaml_path.open("w", encoding="utf-8") as handle:
             yaml.safe_dump(group_config, handle, allow_unicode=True, sort_keys=False)
@@ -171,7 +186,7 @@ def load_metadata_counts(metadata_csv: str, split: str) -> Dict[str, int]:
     counts = {}
     if not metadata_csv:
         return counts
-    with Path(metadata_csv).expanduser().open("r", encoding="utf-8-sig", newline="") as handle:
+    with project_path(metadata_csv).open("r", encoding="utf-8-sig", newline="") as handle:
         rows = csv.DictReader(handle)
         for row in rows:
             if row.get("split") and row["split"] != split:
@@ -216,18 +231,18 @@ def main():
             "Use --source-token NAME=TOKEN when folder names differ.".format(", ".join(empty))
         )
 
-    project = Path(args.project).expanduser().resolve()
+    project = project_path(args.project)
     generated = project / args.name / "group_data"
     dataset_root = _resolve_root(data_path, base_config)
     group_data = write_group_data(base_config, groups, generated, dataset_root)
     metadata_counts = load_metadata_counts(args.metadata_csv, args.split)
-    print("Resolved {} {} images from {}".format(len(images), args.split, data_path))
+    print("Resolved {} {} images from {}".format(len(images), args.split, relative_path(data_path)))
     for name, values in groups.items():
         print("  {:>16}: {:>6} images".format(name, len(values)))
     if metadata_counts:
         print("Metadata CSV counts: {}".format(metadata_counts))
 
-    model = YOLO(args.weights)
+    model = YOLO(str(project_path(args.weights)))
     head = getattr(model.model, "model", [None])[-1]
     if hasattr(head, "quality_blend"):
         head.quality_blend = args.quality_blend
@@ -267,7 +282,7 @@ def main():
     report = project / args.name / "source_test_metrics.json"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
-    print("\nSource metrics saved to {}".format(report))
+    print("\nSource metrics saved to {}".format(relative_path(report)))
 
 
 if __name__ == "__main__":

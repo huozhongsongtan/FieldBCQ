@@ -1,12 +1,11 @@
-# 本项目下的dataset中的数据集仅供大家参考存放格式和调试代码是否能跑通
-# dataset path
-path: /root/autodl-tmp/datasets
-train: ./images/train  # path + train
-val: ./images/val # path + val
-test: ./images/test # path + test
+# Split paths are relative to the directory containing this YAML file.
+# Omit `path` so Ultralytics uses this directory as the dataset root.
+train: images/train
+val: images/val
+test: images/test
 
 # number of classes
 nc: 1
 
 # class names
-names: ['ship']
+names: ['field']

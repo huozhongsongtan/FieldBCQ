@@ -12,11 +12,13 @@ This project contains the four main checkpoint configurations, their archived fi
 
 ### Project Preparation
 
-The local project is located at `F:\project\FieldBQC`. Open a terminal in this directory before following the setup instructions:
+From the directory containing the project, enter `./FieldBQC` before following the setup instructions:
 
 ```powershell
-cd F:\project\FieldBQC
+cd ./FieldBQC
 ```
+
+File and output-directory arguments in the training and test evaluation entry points are relative to the project root. These entry points locate that root from their own files, so moving the project or launching them from another working directory does not change these references. Dataset split entries are relative to the directory containing `./data/datasets.yaml`.
 
 ### Environment Setup
 
@@ -36,6 +38,12 @@ python -c "import ultralytics; print(ultralytics.__file__)"
 ```
 
 The printed path should point to this project's `src/ultralytics` directory.
+
+Check path handling without loading model weights or running inference:
+
+```powershell
+python -m unittest discover -s tests -v
+```
 
 ## Model
 
@@ -88,14 +96,15 @@ The study uses the following split:
 
 The fixed test set includes **83 empty-label images** from DDFHAPD. Keep these negative samples in the evaluation set. The paper uses the `test.cache` counting convention; retain the same image list when comparing results.
 
-The split counts are also available in [dataset_split.csv](./results/test/dataset_split.csv).
+The split counts are also available in [dataset_split.csv](./results/dataset_split.csv).
 
 ### Dataset Configuration
 
 Prepare the dataset with matching image and label filenames:
 
 ```text
-FieldSeg-15K/
+data/
+|-- datasets.yaml
 |-- images/
 |   |-- train/
 |   |-- val/
@@ -114,16 +123,17 @@ Each label file uses YOLO segmentation format, with one field instance per line:
 
 Coordinates are normalized to the image dimensions. Class `0` represents a field parcel.
 
-Before training or evaluation, edit [data/datasets.yaml](./data/datasets.yaml) to point to your dataset and use the correct class name. The archived template currently contains the historical path `/root/autodl-tmp/datasets` and display label `ship`; replace both for the field dataset. For example:
+Place the images and polygon labels under `./data/images` and `./data/labels`. The [dataset configuration](./data/datasets.yaml) uses the following relative entries and field class name:
 
 ```yaml
-path: F:/datasets/FieldSeg-15K
 train: images/train
 val: images/val
 test: images/test
 nc: 1
 names: ['field']
 ```
+
+The `path` key is intentionally omitted so Ultralytics uses the YAML file's directory as the dataset root. For another dataset location, edit the three split entries relative to that directory. The full dataset is not bundled and local images and labels are excluded from Git.
 
 ## Training
 
@@ -136,8 +146,7 @@ For pretrained initialization, prepare an original YOLO11x-seg pretrained checkp
 Run the following from the project directory:
 
 ```powershell
-cd ./src
-python scripts/train_paper.py --stage baseline --data ../data/datasets.yaml --weights ../model/pretrained/yolo11x-seg.pt --epochs 80 --batch 8 --imgsz 640 --seed 0 --project ../results/train --name baseline_seed0
+python src/scripts/train_paper.py --stage baseline --data data/datasets.yaml --weights model/pretrained/yolo11x-seg.pt --epochs 80 --batch 8 --imgsz 640 --seed 0 --project results/train --name baseline_seed0
 ```
 
 Replace `baseline` with `a`, `ab`, or `abc` and assign a corresponding run name. The command shows the current training entry point; it is not a verified reproduction of the historical paper runs. Training from random initialization is available through `--no-pretrained` and constitutes a different experimental setting.
@@ -163,41 +172,47 @@ The following Mask metrics are reported in the research material for the fixed t
 
 The reported paired Mask mAP50-95 gain is **2.97 +/- 0.95 AP** over Baseline and **1.47 +/- 0.15 AP** over PBAS. Here, an increase of 1 AP means an increase of 0.01 in the normalized mAP value.
 
-The machine-readable table is available in [metrics_summary.csv](./results/test/metrics_summary.csv). Detailed per-run and representative group summaries are available in [the test-result archive](./results/test/README.md). These are paper-reported summaries; original test logs and per-image predictions are not included.
+The machine-readable table is available in [metrics_summary.csv](./results/metrics_summary.csv). Detailed per-run and representative group summaries are available in [the test-result archive](./results/README.md). These are paper-reported summaries; original test logs and per-image predictions are not included.
 
 ### Test Evaluation
 
-To evaluate an included checkpoint, run the following from `./src` after completing dataset and environment preparation:
+To evaluate an included checkpoint, run the following from the project root after completing dataset and environment preparation:
 
 ```powershell
-python scripts/val_paper.py --weights ../model/abc/best.pt --data ../data/datasets.yaml --split test --imgsz 640 --batch 8 --max-det 710 --project ../results/test/runs --name abc
+python src/scripts/val_paper.py --weights model/abc/best.pt --data data/datasets.yaml --split test --imgsz 640 --batch 8 --max-det 710 --project results/runs --name abc
 ```
 
 Replace `abc` with the stage to evaluate. The script generates `paper_metrics.json`, evaluation curves, confusion matrices, and batch visualizations in the run directory. This is a new evaluation of one archived checkpoint; it does not regenerate the three-run paper table.
 
-For sequential evaluation of multiple explicitly supplied checkpoints, use [val_paper_all_models.py](./src/scripts/val_paper_all_models.py) with repeated `--weights NAME=PATH` arguments. Its default checkpoint paths refer to the historical server and must be overridden. Set `YOLO_CONFIG_DIR` to a writable local directory before using that script.
+For sequential evaluation, [val_paper_all_models.py](./src/scripts/val_paper_all_models.py) defaults to the four checkpoints under `./model`. Override them with repeated `--weights NAME=PATH` arguments when needed:
+
+```powershell
+python src/scripts/val_paper_all_models.py --data data/datasets.yaml --project results/runs
+```
+
+Scripts default to `./results/runtime_config` for writable Ultralytics settings. An existing `YOLO_CONFIG_DIR` environment variable takes precedence. The generated multi-model summary stores checkpoint and data references relative to the project root.
 
 ### Source-Specific Evaluation
 
-For source, domestic, and foreign subsets, run [val_by_source.py](./src/scripts/val_by_source.py) from `./src`:
+For source, domestic, and foreign subsets, run [val_by_source.py](./src/scripts/val_by_source.py) from the project root:
 
 ```powershell
-python scripts/val_by_source.py --weights ../model/abc/best.pt --data ../data/datasets.yaml --split test --sources DDFHAPD,FBIS,FTW --max-det 710 --project ../results/test/source_eval --name abc
+python src/scripts/val_by_source.py --weights model/abc/best.pt --data data/datasets.yaml --split test --sources DDFHAPD,FBIS,FTW --max-det 710 --project results/source_eval --name abc
 ```
 
-The script groups images using source tokens in their paths or filenames. Preserve these tokens or configure `--source-token` for your dataset. Source-based evaluation alone does not recreate the sensor and resolution groups reported in the paper.
+The script groups images using source tokens in their paths or filenames. Preserve these tokens or configure `--source-token` for your dataset. Generated group YAML files and image lists also contain relative paths. Source-based evaluation alone does not recreate the sensor and resolution groups reported in the paper.
 
 ### Results Archive
 
-The current `./results/test` directory contains:
+The current `./results` directory contains:
 
 | File | Contents |
 |---|---|
-| [README.md](./results/test/README.md) | Test scope, three-run results, representative group results, and naming notes |
-| [metrics_summary.csv](./results/test/metrics_summary.csv) | Paper-reported mean and standard deviation for four configurations |
-| [dataset_split.csv](./results/test/dataset_split.csv) | Train, validation, and test image and instance counts |
+| [README.md](./results/README.md) | Test scope, three-run results, representative group results, and naming notes |
+| [metrics_summary.csv](./results/metrics_summary.csv) | Paper-reported mean and standard deviation for four configurations |
+| [dataset_split.csv](./results/dataset_split.csv) | Train, validation, and test image and instance counts |
 
-Paper result source: `E:\field\论文撰写\FieldSeg-15K_全球多区域田块实例分割研究内容.md`. The original implementation and experiment materials are located at `E:\field\ultralytics-yolo11-main` and `E:\field\实验结果`.
+Paper result source: the research document titled `FieldSeg-15K_全球多区域田块实例分割研究内容`. Its archived test summaries are available under [results](./results/README.md); the implementation and figures are included under `./src` and `./fig`.
 
 ## Figures
 
@@ -216,7 +231,7 @@ The existing images under `./fig` are training and validation artifacts. They do
 
 ### Figure Generation
 
-New evaluations with `val_paper.py` enable plots automatically. Preserve the numerical outputs under `./results/test` and move selected test figures to a separate `./fig/test` directory when they are available. No test images are included in the current figure archive.
+New evaluations with `val_paper.py` enable plots automatically. Preserve the numerical outputs under `./results` and move selected test figures to a separate `./fig/test` directory when they are available. No test images are included in the current figure archive.
 
 The legacy [plot_result.py](./src/scripts/plot_result.py) uses a manually configured run list and historical paths. Update those inputs before using it to plot new experiments.
 
@@ -225,6 +240,8 @@ The legacy [plot_result.py](./src/scripts/plot_result.py) uses a manually config
 ```text
 FieldBQC/
 |-- README.md
+|-- tests/
+|   `-- test_relative_paths.py    # path portability checks
 |-- src/
 |   |-- scripts/                  # training, evaluation, and analysis
 |   |-- ultralytics/              # local source, custom heads, and model YAMLs
@@ -238,10 +255,9 @@ FieldBQC/
 |-- data/
 |   `-- datasets.yaml             # dataset configuration template
 |-- results/
-|   `-- test/
-|       |-- README.md
-|       |-- metrics_summary.csv
-|       `-- dataset_split.csv
+|   |-- README.md
+|   |-- metrics_summary.csv
+|   `-- dataset_split.csv
 `-- fig/
     |-- baseline/
     |-- a/
@@ -249,4 +265,4 @@ FieldBQC/
     `-- abc/
 ```
 
-The structure above describes the current archive. Directories such as `results/train`, `results/test/runs`, and `fig/test` are created only when new experiments are run and archived.
+The structure above describes the current archive. Directories such as `./results/train`, `./results/runs`, and `./fig/test` are created only when new experiments are run and archived.

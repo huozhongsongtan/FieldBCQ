@@ -3,6 +3,8 @@
 import argparse
 import warnings
 
+from project_paths import project_path
+
 from ultralytics import YOLO
 
 
@@ -72,8 +74,8 @@ STAGES = {
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", choices=STAGES, default="baseline")
-    parser.add_argument("--data", default="dataset/datasets.yaml")
-    parser.add_argument("--weights", default="yolo11x-seg.pt")
+    parser.add_argument("--data", default="data/datasets.yaml")
+    parser.add_argument("--weights", default="model/pretrained/yolo11x-seg.pt")
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--batch", type=int, default=8)
     parser.add_argument("--imgsz", type=int, default=640)
@@ -82,7 +84,7 @@ def parse_args():
     parser.add_argument("--val-fraction", type=float, default=1.0, help="Validation-set fraction; use 0.05 for smoke tests.")
     parser.add_argument("--device", default=None)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--project", default="runs/paper")
+    parser.add_argument("--project", default="results/train")
     parser.add_argument("--name", default=None)
     parser.add_argument("--resume", default=None, help="Resume from a stage-specific last.pt checkpoint.")
     parser.add_argument("--no-pretrained", action="store_true", help="Do not load YOLO11x-seg pretrained weights.")
@@ -98,14 +100,14 @@ def main():
     stage = STAGES[args.stage]
 
     if args.resume:
-        model = YOLO(args.resume)
+        model = YOLO(str(project_path(args.resume)))
         train_args = {"resume": True}
     else:
-        model = YOLO(stage["model"])
+        model = YOLO(str(project_path("src") / stage["model"]))
         if not args.no_pretrained:
-            model.load(args.weights)
+            model.load(str(project_path(args.weights)))
         train_args = {
-            "data": args.data,
+            "data": str(project_path(args.data)),
             "epochs": args.epochs,
             "batch": args.batch,
             "imgsz": args.imgsz,
@@ -116,7 +118,7 @@ def main():
             "close_mosaic": 10,
             "seed": args.seed,
             "deterministic": True,
-            "project": args.project,
+            "project": str(project_path(args.project)),
             "name": args.name or f"{stage['name']}_seed{args.seed}",
             "amp": True,
             **stage["overrides"],

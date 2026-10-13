@@ -30,3 +30,7 @@ desktop.ini
 *.log
 events.out.tfevents.*
 results/runtime_config/
+
+# Local image and polygon datasets
+data/images/
+data/labels/
