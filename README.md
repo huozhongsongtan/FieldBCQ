@@ -1,21 +1,21 @@
-# FieldBQC: Boundary Supervision and Region-Boundary Quality Calibration for Multi-Region Field Instance Segmentation
+# FieldBCQ: Boundary Supervision, Contour Consistency, and Quality Calibration for Multi-Region Farmland Parcel Instance Segmentation
 
-**Field instance segmentation in heterogeneous remote sensing imagery using YOLO11x-seg, parcel boundary supervision, and instance quality calibration.**
+**A boundary-aware framework for farmland parcel instance segmentation in heterogeneous remote-sensing imagery.**
 
-FieldBQC combines Parcel Boundary Auxiliary Supervision (PBAS) with Region-Boundary Quality Calibration (RBQC). PBAS learns field boundaries through BCE and Boundary Dice supervision. RBQC estimates region and boundary quality to recalibrate instance confidence scores.
+FieldBCQ extends YOLO11x-seg through three progressive improvement mechanisms: Boundary-Aware Pixel Supervision (BAPS), Parcel Contour Structural Consistency Constraint (PCSC), and Region-Boundary Quality Calibration (RBQC). BAPS improves boundary-pixel discrimination, PCSC strengthens overall contour consistency, and RBQC estimates regional and boundary quality to recalibrate instance confidence scores. Together, these improvements enhance boundary-aware segmentation and prediction ranking across heterogeneous imaging conditions.
 
-The study uses **FieldSeg-15K**, a multi-region subset containing **15,000 images** and **403,199 field instances** from DDFHAPD, FBIS-22M, and FTW. On the fixed test set, the paper reports a three-run Mask mAP50-95 of **0.420 +/- 0.004** for FieldBQC.
+The study uses **FieldSeg-15K: Global Multi-Region Farmland Parcel Instance Segmentation Dataset**, comprising **15,000 remote-sensing images**, **15,000 matching annotation files**, and **403,199 field instances** across **26 countries** and multiple sensor spatial resolutions. On the fixed test set, the reported three-run mean Mask mAP50-95 for FieldBCQ is **0.420 +/- 0.004**.
 
-This project contains the four main checkpoint configurations, their archived figures, and the paper's test-result summaries. The relationship between the archived `abc` checkpoint and the paper's FieldBQC runs is described under [Model Preparation](#model-preparation).
+This repository provides the paper-aligned Baseline, PCSC ablation, BAPS + PCSC, and FieldBCQ configurations, together with their archived checkpoints, implementation code, architecture figures, and paper-reported evaluation summaries. The CLI and checkpoint aliases `baseline`, `a`, `ab`, and `abc` are retained for reproducibility and are mapped to the paper configurations under [Model Preparation](#model-preparation).
 
 ## Prerequisites
 
 ### Project Preparation
 
-From the directory containing the project, enter `./FieldBQC` before following the setup instructions:
+From the directory containing the project, enter `./FieldBCQ` before following the setup instructions:
 
 ```powershell
-cd ./FieldBQC
+cd ./FieldBCQ
 ```
 
 File and output-directory arguments in the training and test evaluation entry points are relative to the project root. These entry points locate that root from their own files, so moving the project or launching them from another working directory does not change these references. Dataset split entries are relative to the directory containing `./data/datasets.yaml`.
@@ -51,25 +51,25 @@ python -m unittest discover -s tests -v
 
 The paper evaluates four progressive configurations:
 
-| Configuration | Components | Purpose |
+| Paper configuration | Components | Purpose |
 |---|---|---|
 | Baseline | YOLO11x-seg | Reference instance segmentation model |
-| A | Boundary Dice | Boundary supervision ablation |
-| A+B | PBAS: BCE + Boundary Dice | Joint parcel boundary supervision |
-| FieldBQC | PBAS + RBQC | Boundary supervision and region-boundary quality calibration |
+| PCSC ablation | Parcel Contour Structural Consistency Constraint (PCSC) | Preliminary contour supervision ablation |
+| BAPS + PCSC | Boundary-Aware Pixel Supervision (BAPS) + Parcel Contour Structural Consistency Constraint (PCSC) | Joint boundary representation |
+| FieldBCQ | BAPS + PCSC + Region-Boundary Quality Calibration (RBQC) | Boundary representation and quality-aware confidence calibration |
 
 ### Model Preparation
 
 The following trained checkpoints are included under `./model`. Model YAML files are stored under `./src/ultralytics/cfg/models/11`.
 
-| Archived Stage | CLI Stage | Model Configuration | Trained Checkpoint |
+| Paper Configuration | CLI Stage | Model Configuration | Trained Checkpoint |
 |---|---|---|---|
 | Baseline | `baseline` | [yolo11x-seg.yaml](./src/ultralytics/cfg/models/11/yolo11x-seg.yaml) | [best.pt](./model/baseline/best.pt) |
-| A | `a` | [yolo11x-seg-boundary-dice.yaml](./src/ultralytics/cfg/models/11/yolo11x-seg-boundary-dice.yaml) | [best.pt](./model/a/best.pt) |
-| A+B | `ab` | [yolo11x-seg-bas.yaml](./src/ultralytics/cfg/models/11/yolo11x-seg-bas.yaml) | [best.pt](./model/ab/best.pt) |
-| A+B+C | `abc` | [yolo11x-seg-bas-mqc.yaml](./src/ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml) | [best.pt](./model/abc/best.pt) |
+| PCSC ablation | `a` | [yolo11x-seg-boundary-dice.yaml](./src/ultralytics/cfg/models/11/yolo11x-seg-boundary-dice.yaml) | [best.pt](./model/a/best.pt) |
+| BAPS + PCSC | `ab` | [yolo11x-seg-bas.yaml](./src/ultralytics/cfg/models/11/yolo11x-seg-bas.yaml) | [best.pt](./model/ab/best.pt) |
+| FieldBCQ | `abc` | [yolo11x-seg-bas-mqc.yaml](./src/ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml) | [best.pt](./model/abc/best.pt) |
 
-The archived implementation names its complete configuration `BAS + Boundary Dice + MQC` (`A+B+C` / `abc`); the paper names its complete method `PBAS + RBQC` (`FieldBQC`). A checkpoint-to-paper-run mapping has not been verified, so the paper's three-run test values are reported separately from these four checkpoints. Renaming the project to FieldBQC does not establish that mapping.
+The paper evaluates three progressive improvement mechanisms: BAPS, PCSC, and RBQC. The `abc` checkpoint combines all three mechanisms and represents the complete FieldBCQ configuration. The archived implementation realizes BAPS with BCE and PCSC with Boundary Dice and uses internal names such as `BAS` and `MQC`; these names are retained in the code and file paths for reproducibility. A checkpoint-to-paper-run mapping has not been verified, so the paper's three-run test values are reported separately from these archived checkpoints.
 
 The archive contains one `best.pt` per stage. It does not contain all 12 checkpoints used for the paper's three-run summaries or checkpoints for comparison models.
 
@@ -77,26 +77,54 @@ The archive contains one `best.pt` per stage. It does not contain all 12 checkpo
 
 ### FieldSeg-15K Dataset
 
-FieldSeg-15K is an experimental subset assembled from three sources. The counts below are taken from the research material and describe the study's dataset, which is not bundled with this project.
-
-| Source | Total Images | Total Instances | Test Images | Test Instances |
-|---|---:|---:|---:|---:|
-| DDFHAPD | 5,250 | 85,660 | 700 | 5,256 |
-| FBIS-22M | 8,250 | 275,357 | 1,100 | 9,608 |
-| FTW | 1,500 | 42,182 | 200 | 6,326 |
-| **Total** | **15,000** | **403,199** | **2,000** | **21,190** |
+FieldSeg-15K contains **15,000 remote-sensing images**, **15,000 matching annotation files**, and **403,199 field instances**. Each field parcel is represented as an independent instance polygon, and each annotation line corresponds to one field instance. The dataset covers multiple countries, agricultural landscapes, and sensor spatial resolutions, providing a unified benchmark for multi-region field instance segmentation.
 
 The study uses the following split:
 
-| Split | Images | Field Instances | Use |
-|---|---:|---:|---|
-| Train | 12,000 | 353,352 | Parameter learning |
-| Val | 1,000 | 28,657 | Hyperparameter and checkpoint selection |
-| Test | 2,000 | 21,190 | Final evaluation |
+| Split | Images | Field Instances | Share | Use |
+|---|---:|---:|---:|---|
+| Train | 12,000 | 353,352 | 80.0% | Parameter learning |
+| Val | 1,000 | 28,657 | 6.7% | Hyperparameter and checkpoint selection |
+| Test | 2,000 | 21,190 | 13.3% | Final evaluation |
+| **Total** | **15,000** | **403,199** | **100%** | |
 
-The fixed test set includes **83 empty-label images** from DDFHAPD. Keep these negative samples in the evaluation set. The paper uses the `test.cache` counting convention; retain the same image list when comparing results.
+The fixed test set includes **83 empty-label images**. These negative samples remain in the evaluation set, and the paper uses the `test.cache` counting convention. Retain the same image list when comparing results.
 
 The split counts are also available in [dataset_split.csv](./results/dataset_split.csv).
+
+The sensor spatial-resolution distribution is:
+
+| Sensor spatial resolution | Images | Field instances |
+|---:|---:|---:|
+| 0.25 m | 60 | 118 |
+| 0.30 m | 769 | 1,740 |
+| 0.50 m | 255 | 561 |
+| 1.00 m | 285 | 4,012 |
+| 1.20 m | 287 | 2,367 |
+| 2.00 m | 80 | 798 |
+| 3.00 m | 1,778 | 41,977 |
+| 10.00 m | 11,486 | 351,626 |
+| **Total** | **15,000** | **403,199** |
+
+The 1.00 m category combines 1 m and 100 cm products; the 3.00 m category combines 3 m and 300 cm products. The country distribution is:
+
+| Country | Images | Field instances | Country | Images | Field instances |
+|---|---:|---:|---|---:|---:|
+| China | 5,250 | 85,660 | France | 3,389 | 212,940 |
+| Slovakia | 2,885 | 38,112 | Ukraine | 1,869 | 12,725 |
+| Austria | 244 | 11,515 | Netherlands | 145 | 4,528 |
+| Sweden | 150 | 2,812 | Latvia | 141 | 1,307 |
+| Spain | 121 | 7,929 | Estonia | 118 | 959 |
+| Lithuania | 117 | 2,166 | Finland | 113 | 2,204 |
+| Denmark | 93 | 1,287 | Croatia | 78 | 4,718 |
+| Slovenia | 75 | 3,561 | Belgium | 49 | 1,582 |
+| India | 44 | 192 | Brazil | 42 | 171 |
+| Luxembourg | 33 | 1,588 | South Africa | 15 | 186 |
+| Cambodia | 9 | 4,337 | Vietnam | 9 | 2,544 |
+| Germany | 4 | 72 | Kenya | 4 | 5 |
+| Rwanda | 2 | 46 | Portugal | 1 | 53 |
+
+The dataset covers **26 countries** after consolidating regional identifiers; the Corsica region is counted under France. This geographic and sensor diversity supports evaluation of model generalization across countries, agricultural landscapes, and image resolutions.
 
 ### Dataset Configuration
 
@@ -166,13 +194,13 @@ The following Mask metrics are reported in the research material for the fixed t
 | Configuration | Precision | Recall | F1 | mAP50 | mAP75 | mAP50-95 |
 |---|---:|---:|---:|---:|---:|---:|
 | Baseline | 0.663 +/- 0.012 | 0.600 +/- 0.001 | 0.630 +/- 0.005 | 0.611 +/- 0.007 | 0.400 +/- 0.008 | 0.390 +/- 0.006 |
-| A: Boundary Dice | 0.672 +/- 0.004 | 0.606 +/- 0.004 | 0.637 +/- 0.004 | 0.622 +/- 0.004 | 0.411 +/- 0.002 | 0.400 +/- 0.002 |
-| A+B: PBAS | 0.673 +/- 0.001 | 0.614 +/- 0.003 | 0.642 +/- 0.001 | 0.628 +/- 0.004 | 0.415 +/- 0.002 | 0.405 +/- 0.003 |
-| FieldBQC: PBAS + RBQC | **0.694 +/- 0.007** | **0.615 +/- 0.002** | **0.652 +/- 0.003** | **0.640 +/- 0.004** | **0.434 +/- 0.003** | **0.420 +/- 0.004** |
+| Contour-overlap ablation | 0.672 +/- 0.004 | 0.606 +/- 0.004 | 0.637 +/- 0.004 | 0.622 +/- 0.004 | 0.411 +/- 0.002 | 0.400 +/- 0.002 |
+| Combined boundary supervision | 0.673 +/- 0.001 | 0.614 +/- 0.003 | 0.642 +/- 0.001 | 0.628 +/- 0.004 | 0.415 +/- 0.002 | 0.405 +/- 0.003 |
+| FieldBCQ: three-mechanism configuration | **0.694 +/- 0.007** | **0.615 +/- 0.002** | **0.652 +/- 0.003** | **0.640 +/- 0.004** | **0.434 +/- 0.003** | **0.420 +/- 0.004** |
 
-The reported paired Mask mAP50-95 gain is **2.97 +/- 0.95 AP** over Baseline and **1.47 +/- 0.15 AP** over PBAS. Here, an increase of 1 AP means an increase of 0.01 in the normalized mAP value.
+The reported paired Mask mAP50-95 gain is **2.97 +/- 0.95 AP** over Baseline and **1.47 +/- 0.15 AP** over the combined boundary supervision configuration. Here, an increase of 1 AP means an increase of 0.01 in the normalized mAP value.
 
-The machine-readable table is available in [metrics_summary.csv](./results/metrics_summary.csv). Detailed per-run and representative group summaries are available in [the test-result archive](./results/README.md). These are paper-reported summaries; original test logs and per-image predictions are not included.
+The machine-readable table is available in [metrics_summary.csv](./results/metrics_summary.csv). These are paper-reported summaries; original test logs and per-image predictions are not included.
 
 ### Test Evaluation
 
@@ -208,26 +236,28 @@ The current `./results` directory contains:
 
 | File | Contents |
 |---|---|
-| [README.md](./results/README.md) | Test scope, three-run results, representative group results, and naming notes |
 | [metrics_summary.csv](./results/metrics_summary.csv) | Paper-reported mean and standard deviation for four configurations |
 | [dataset_split.csv](./results/dataset_split.csv) | Train, validation, and test image and instance counts |
 
-Paper result source: the research document titled `FieldSeg-15K_全球多区域田块实例分割研究内容`. Its archived test summaries are available under [results](./results/README.md); the implementation and figures are included under `./src` and `./fig`.
+Paper result source: the research document titled `FieldSeg-15K_全球多区域田块实例分割研究内容`. Its test summaries are archived in the CSV files above; the implementation and figures are included under `./src` and `./fig`.
 
 ## Figures
 
-### Archived Training and Validation Figures
+### FieldBCQ Architecture (Archived `abc`)
 
-The existing images under `./fig` are training and validation artifacts. They do not represent the test-set summaries above.
+The following diagram follows the archived `yolo11x-seg-bas-mqc.yaml` graph and the `BASMQCSegment` head. The boundary supervision branch implements BAPS and PCSC during training; the archived implementation uses BCE and Boundary Dice for these objectives. RBQC predicts Mask-IoU and Boundary-F1 quality and uses their geometric mean to calibrate class confidence before NMS.
 
-| Stage | Training Curves | Mask PR Curve | Confusion Matrix | Validation Predictions |
-|---|---|---|---|---|
-| Baseline | [results.png](./fig/baseline/results.png) | [MaskPR_curve.png](./fig/baseline/MaskPR_curve.png) | [confusion_matrix.png](./fig/baseline/confusion_matrix.png) | [val_batch0_pred.jpg](./fig/baseline/val_batch0_pred.jpg) |
-| A | [results.png](./fig/a/results.png) | [MaskPR_curve.png](./fig/a/MaskPR_curve.png) | [confusion_matrix.png](./fig/a/confusion_matrix.png) | [val_batch0_pred.jpg](./fig/a/val_batch0_pred.jpg) |
-| A+B | [results.png](./fig/ab/results.png) | [MaskPR_curve.png](./fig/ab/MaskPR_curve.png) | [confusion_matrix.png](./fig/ab/confusion_matrix.png) | [val_batch0_pred.jpg](./fig/ab/val_batch0_pred.jpg) |
-| A+B+C | [results.png](./fig/abc/results.png) | [MaskPR_curve.png](./fig/abc/MaskPR_curve.png) | [confusion_matrix.png](./fig/abc/confusion_matrix.png) | [val_batch0_pred.jpg](./fig/abc/val_batch0_pred.jpg) |
+![YOLO11x-seg FieldBCQ architecture](./fig/fieldbcq_architecture_en.png)
 
-![Archived A+B+C training and validation curves](./fig/abc/results.png)
+Vector and print-ready versions are available as [SVG](./fig/fieldbcq_architecture_en.svg) and [PDF](./fig/fieldbcq_architecture_en.pdf). A Chinese-labelled version is available as [PNG](./fig/fieldbcq_architecture_zh.png), [SVG](./fig/fieldbcq_architecture_zh.svg), and [PDF](./fig/fieldbcq_architecture_zh.pdf).
+
+The [figure notes](./fig/fieldbcq_architecture_notes.md) include bilingual captions, source-code mappings, and the simplifications used in this module-level diagram. PNG exports use 600 dpi; Chinese SVG text requires a compatible CJK font when edited.
+
+Regenerate the figures with [draw_fieldbcq_architecture.py](./fig/draw_fieldbcq_architecture.py):
+
+```powershell
+python fig/draw_fieldbcq_architecture.py --language both --dpi 600
+```
 
 ### Figure Generation
 
@@ -238,12 +268,12 @@ The legacy [plot_result.py](./src/scripts/plot_result.py) uses a manually config
 ## Project Structure
 
 ```text
-FieldBQC/
+FieldBCQ/
 |-- README.md
 |-- tests/
 |   `-- test_relative_paths.py    # path portability checks
 |-- src/
-|   |-- scripts/                  # training, evaluation, and analysis
+|   |-- scripts/                  # training, evaluation, analysis, and figures
 |   |-- ultralytics/              # local source, custom heads, and model YAMLs
 |   |-- pyproject.toml
 |   `-- LICENSE
@@ -255,14 +285,15 @@ FieldBQC/
 |-- data/
 |   `-- datasets.yaml             # dataset configuration template
 |-- results/
-|   |-- README.md
 |   |-- metrics_summary.csv
 |   `-- dataset_split.csv
 `-- fig/
-    |-- baseline/
-    |-- a/
-    |-- ab/
-    `-- abc/
+    |-- draw_fieldbcq_architecture.py
+    |-- fieldbcq_architecture_notes.md
+    |-- fieldbcq_architecture_en.png
+    |-- fieldbcq_architecture_zh.png
+    |-- fieldbcq_architecture_*.svg
+    `-- fieldbcq_architecture_*.pdf
 ```
 
 The structure above describes the current archive. Directories such as `./results/train`, `./results/runs`, and `./fig/test` are created only when new experiments are run and archived.
