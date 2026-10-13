@@ -2,7 +2,7 @@
 
 **Boundary Supervision, Contour Consistency, and Quality Calibration for Multi-Region Farmland Parcel Instance Segmentation**
 
-FieldBCQ is a farmland parcel instance segmentation framework built on YOLO11x-seg. It combines **Boundary-Aware Pixel Supervision (BAPS)**, **Parcel Contour Structural Consistency Constraint (PCSC)**, and **Region-Boundary Quality Calibration (RBQC)** to supervise parcel boundaries and calibrate instance confidence.
+FieldBCQ is a farmland parcel instance segmentation framework built on YOLO11x-seg. Its three improvements target the segmentation head, the training loss, and inference-time post-processing: **Boundary-Aware Pixel Supervision (BAPS)**, **Parcel Contour Structural Consistency Constraint (PCSC)**, and **Region-Boundary Quality Calibration (RBQC)**.
 
 The study uses **AgriParcel-MR26: A Multi-Country, Multi-Resolution Farmland Parcel Instance Segmentation Dataset**, containing **15,000 remote-sensing images**, **15,000 matching annotation files**, and **403,199 parcel instances** across **26 countries**. It spans **8 sensor spatial resolution categories**, ranging from **0.25 m to 10 m**.
 
@@ -12,26 +12,32 @@ On the fixed AgriParcel-MR26 test split, the paper reports a three-run mean **Ma
 
 ### Three Improvement Mechanisms
 
-| Mechanism | Full Name | Role in FieldBCQ |
+The three contributions are classified by their primary effect in the implemented method:
+
+| Mechanism | Primary Category | Implementation and Effect |
 |---|---|---|
-| **BAPS** | Boundary-Aware Pixel Supervision | Uses pixel-wise BCE supervision to distinguish boundary pixels in an auxiliary boundary prediction map. |
-| **PCSC** | Parcel Contour Structural Consistency Constraint | Uses Boundary Dice to encourage overlap consistency between the predicted boundary map and its target. |
-| **RBQC** | Region-Boundary Quality Calibration | Estimates region and boundary quality and uses their geometric mean to recalibrate class confidence before NMS. |
+| **BAPS** | **Segmentation-head enhancement** | Adds an auxiliary boundary prediction branch to the segmentation head. The branch predicts a boundary map from mask prototypes and is trained with pixel-wise BCE, improving boundary-pixel discrimination. |
+| **PCSC** | **Contour-consistency loss** | Adds a Boundary Dice loss between the predicted boundary map and the ground-truth boundary target, encouraging boundary overlap and contour consistency. |
+| **RBQC** | **Quality-aware inference post-processing** | Uses region and boundary quality estimates to calibrate instance confidence before NMS, so suppression and ranking use quality-aware scores. |
 
-BAPS and PCSC supervise the same auxiliary boundary branch, which takes mask prototypes as input and operates during training. The boundary target is constructed from the union of ground-truth instance masks using dilation and erosion. PCSC denotes the Boundary Dice objective in this implementation; it does not introduce a separate contour encoder or topology loss.
+**BAPS: segmentation-head enhancement.** The boundary branch takes mask prototypes as input and operates during training. Its auxiliary prediction is supervised with BCE on a boundary target constructed by applying dilation and erosion to the union of ground-truth instance masks. This adds a boundary prediction task alongside parcel detection and mask prediction.
 
-RBQC operates on the three feature scales used by the segmentation head. Its region and boundary quality targets are detached Soft IoU and tolerant Boundary-F1 values computed from matched predicted and ground-truth instance masks. At inference, the predicted qualities calibrate confidence before box NMS, and the retained mask coefficients and prototypes decode parcel masks.
+**PCSC: contour-consistency loss.** PCSC is implemented as a Boundary Dice term on the same boundary prediction and target used by BAPS. It improves overlap consistency at the mask-boundary level. It does not add a separate network module or explicitly construct pairwise boundaries between individual parcels.
+
+**RBQC: quality-aware inference post-processing.** A multi-scale quality prediction head is trained with detached Soft IoU and tolerant Boundary-F1 targets computed from matched predicted and ground-truth masks. At inference, the predicted region and boundary qualities are combined by their geometric mean to calibrate class confidence before box NMS. Thus, its primary contribution is confidence calibration at the inference decision stage, supported by a learned quality head and its training loss.
+
+Together, the primary categories are segmentation-head enhancement (BAPS), contour-consistency loss (PCSC), and quality-aware post-processing (RBQC). The method does not modify the dataset or annotations, backbone, neck, or label-assignment strategy.
 
 ### Configurations and Checkpoints
 
 The four configurations use the same YOLO11x-seg backbone. Their names are used consistently in the method description, results, and experiment commands.
 
-| Configuration | Added Mechanisms | Training Option | Model Definition | Trained Checkpoint |
-|---|---|---|---|---|
-| **Baseline** | None | `--stage baseline` | [YOLO11x-seg](./src/ultralytics/cfg/models/11/yolo11x-seg.yaml) | [Baseline checkpoint](./model/baseline/best.pt) |
-| **PCSC** | PCSC | `--stage pcsc` | [Contour supervision model](./src/ultralytics/cfg/models/11/yolo11x-seg-boundary-dice.yaml) | [PCSC checkpoint](./model/a/best.pt) |
-| **BAPS + PCSC** | BAPS and PCSC | `--stage baps_pcsc` | [Joint boundary supervision model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas.yaml) | [BAPS + PCSC checkpoint](./model/ab/best.pt) |
-| **FieldBCQ** | BAPS, PCSC, and RBQC | `--stage fieldbcq` | [Complete FieldBCQ model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml) | [FieldBCQ checkpoint](./model/abc/best.pt) |
+| Configuration | Primary Improvement Category | Mechanisms | Training Option | Model Definition | Trained Checkpoint |
+|---|---|---|---|---|---|
+| **Baseline** | Reference | None | `--stage baseline` | [YOLO11x-seg](./src/ultralytics/cfg/models/11/yolo11x-seg.yaml) | [Baseline checkpoint](./model/baseline/best.pt) |
+| **PCSC** | Loss function | PCSC | `--stage pcsc` | [Contour supervision model](./src/ultralytics/cfg/models/11/yolo11x-seg-boundary-dice.yaml) | [PCSC checkpoint](./model/a/best.pt) |
+| **BAPS + PCSC** | Segmentation head + loss function | BAPS, PCSC | `--stage baps_pcsc` | [Joint boundary supervision model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas.yaml) | [BAPS + PCSC checkpoint](./model/ab/best.pt) |
+| **FieldBCQ** | Segmentation head + loss function + inference post-processing | BAPS, PCSC, RBQC | `--stage fieldbcq` | [Complete FieldBCQ model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml) | [FieldBCQ checkpoint](./model/abc/best.pt) |
 
 Each configuration includes one trained checkpoint. The individual checkpoints have not been matched to the paper's three repeated runs, so the reported three-run results are presented separately from new evaluations of these files. The repository does not contain all 12 checkpoints used for the repeated-run summaries or checkpoints for comparison methods.
 
