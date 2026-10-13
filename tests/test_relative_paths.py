@@ -71,11 +71,39 @@ class RelativePathTests(unittest.TestCase):
             finally:
                 os.chdir(old_cwd)
 
+    def test_public_training_names_select_expected_model_and_losses(self):
+        configurations = [
+            ("pcsc", "yolo11x-seg-boundary-dice.yaml", {"boundary": 0.20}),
+            ("baps_pcsc", "yolo11x-seg-bas.yaml", {"boundary": 0.20}),
+            ("fieldbcq", "yolo11x-seg-bas-mqc.yaml", {
+                "boundary": 0.20,
+                "btq_quality": 0.25,
+                "btq_point": 0.0,
+                "btq_boundary_width": 2,
+            }),
+        ]
+        for name, configuration, overrides in configurations:
+            with self.subTest(name=name):
+                model = Mock()
+                argv = ["train_paper.py", "--stage", name, "--no-pretrained", "--seed", "3"]
+                with patch.object(self.train, "YOLO", return_value=model) as constructor:
+                    with patch.object(sys, "argv", argv):
+                        self.train.main()
+                self.assertEqual(
+                    Path(constructor.call_args.args[0]),
+                    ROOT / "src/ultralytics/cfg/models/11" / configuration,
+                )
+                arguments = model.train.call_args.kwargs
+                self.assertEqual(arguments["name"], name + "_seed3")
+                for key, value in overrides.items():
+                    self.assertEqual(arguments[key], value)
+
     def test_default_models_and_checkpoint_names(self):
         defaults = self.multi.parse_models(None)
-        self.assertEqual([name for name, _ in defaults], ["baseline", "a", "ab", "abc"])
-        for name, path in defaults:
-            self.assertEqual(path, ROOT / "model" / name / "best.pt")
+        self.assertEqual([name for name, _ in defaults], ["baseline", "pcsc", "baps_pcsc", "fieldbcq"])
+        checkpoint_directories = ["baseline", "a", "ab", "abc"]
+        for (_, path), directory in zip(defaults, checkpoint_directories):
+            self.assertEqual(path, ROOT / "model" / directory / "best.pt")
         models = self.multi.parse_models(["model/a/best.pt", "model/ab/best.pt"])
         self.assertEqual([name for name, _ in models], ["a", "ab"])
         with self.assertRaises(ValueError):

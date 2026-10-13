@@ -15,9 +15,9 @@ from ultralytics import YOLO
 
 DEFAULT_MODELS: List[Tuple[str, Path]] = [
     ("baseline", Path("model/baseline/best.pt")),
-    ("a", Path("model/a/best.pt")),
-    ("ab", Path("model/ab/best.pt")),
-    ("abc", Path("model/abc/best.pt")),
+    ("pcsc", Path("model/a/best.pt")),
+    ("baps_pcsc", Path("model/ab/best.pt")),
+    ("fieldbcq", Path("model/abc/best.pt")),
 ]
 
 

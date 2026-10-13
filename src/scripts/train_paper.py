@@ -1,4 +1,4 @@
-"""Train the complete A/B/C factorial ablation for the paper."""
+"""Train FieldBCQ and its boundary-supervision ablations."""
 
 import argparse
 import warnings
@@ -69,6 +69,12 @@ STAGES = {
         },
     },
 }
+
+STAGES.update({
+    "pcsc": {**STAGES["a"], "name": "pcsc"},
+    "baps_pcsc": {**STAGES["ab"], "name": "baps_pcsc"},
+    "fieldbcq": {**STAGES["abc"], "name": "fieldbcq"},
+})
 
 
 def parse_args():
