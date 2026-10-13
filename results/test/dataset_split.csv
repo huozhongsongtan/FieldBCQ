@@ -1,0 +1,4 @@
+split,images,instances,purpose,source
+Train,12000,353352,parameter learning,FieldSeg-15K paper summary
+Val,1000,28657,hyperparameter and checkpoint selection,FieldSeg-15K paper summary
+Test,2000,21190,final evaluation,FieldSeg-15K paper summary

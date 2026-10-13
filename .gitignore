@@ -1,0 +1,32 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Runtime caches and logs
+*.cache
+*.log
+events.out.tfevents.*
+results/runtime_config/
