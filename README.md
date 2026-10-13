@@ -207,25 +207,6 @@ python -m unittest discover -s tests -v
 
 Training writes checkpoints, metrics, and plots into each run directory. The `results` directory also contains the paper's [performance summary](./results/metrics_summary.csv) and [dataset split counts](./results/dataset_split.csv). Archive selected outputs together with their run metadata after each experiment.
 
-## Architecture Figures
-
-The diagram follows the complete FieldBCQ model definition and its segmentation head. It shows the shared boundary prediction branch, the BAPS and PCSC training objectives, and the RBQC quality prediction and confidence calibration path.
-
-![FieldBCQ architecture with BAPS, PCSC, and RBQC](./fig/fieldbcq_architecture_en.png)
-
-| Version | High-Resolution Image | Editable Vector | Print-Ready PDF |
-|---|---|---|---|
-| English | [PNG](./fig/fieldbcq_architecture_en.png) | [SVG](./fig/fieldbcq_architecture_en.svg) | [PDF](./fig/fieldbcq_architecture_en.pdf) |
-| Chinese | [PNG](./fig/fieldbcq_architecture_zh.png) | [SVG](./fig/fieldbcq_architecture_zh.svg) | [PDF](./fig/fieldbcq_architecture_zh.pdf) |
-
-The [figure notes](./fig/fieldbcq_architecture_notes.md) provide bilingual captions, source-code mappings, and diagram simplifications. PNG files are exported at 600 dpi. Chinese SVG text requires a compatible CJK font when edited.
-
-Regenerate both versions with [draw_fieldbcq_architecture.py](./fig/draw_fieldbcq_architecture.py):
-
-```powershell
-python fig/draw_fieldbcq_architecture.py --language both --dpi 600
-```
-
 ## Repository Structure
 
 ```text
