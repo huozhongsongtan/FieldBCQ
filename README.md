@@ -186,7 +186,7 @@ The command launches a new training run; it is not a verified reproduction of th
 After preparing AgriParcel-MR26 and the environment, evaluate all four included checkpoints with [val_paper_all_models.py](./src/scripts/val_paper_all_models.py):
 
 ```powershell
-python src/scripts/val_paper_all_models.py --data data/datasets.yaml --split test --imgsz 640 --batch 8 --max-det 710 --project results/runs
+python src/scripts/val_paper_all_models.py --data data/datasets.yaml --split test --imgsz 640 --batch 8 --project results/runs
 ```
 
 The evaluation names are `baseline`, `pcsc`, `baps_pcsc`, and `fieldbcq`. The script writes per-model `paper_metrics.json` files, a combined `paper_metrics_all.json`, and evaluation plots. Checkpoint and dataset references in the combined summary are relative to the project root.
