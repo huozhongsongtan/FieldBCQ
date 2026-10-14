@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from .checks import check_version
-from .metrics import bbox_iou, probiou, wasserstein_loss, gcd_loss
+from .metrics import bbox_iou, probiou
 from .ops import xywhr2xyxyxyxy
 
 TORCH_1_10 = check_version(torch.__version__, "1.10.0")
@@ -128,8 +128,6 @@ class TaskAlignedAssigner(nn.Module):
     def iou_calculation(self, gt_bboxes, pd_bboxes):
         """IoU calculation for horizontal bounding boxes."""
         return bbox_iou(gt_bboxes, pd_bboxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
-        # return wasserstein_loss(gt_bboxes, pd_bboxes).squeeze(-1).clamp_(0)
-        # return gcd_loss(gt_bboxes, pd_bboxes).squeeze(-1).clamp_(0)
 
     def select_topk_candidates(self, metrics, largest=True, topk_mask=None):
         """

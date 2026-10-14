@@ -54,7 +54,6 @@ from ultralytics.utils.torch_utils import (
     strip_optimizer,
     torch_distributed_zero_first,
 )
-from ultralytics.nn.extra_modules.kernel_warehouse import get_temperature
 
 class BaseTrainer:
     """
@@ -380,10 +379,6 @@ class BaseTrainer:
                         if "momentum" in x:
                             x["momentum"] = np.interp(ni, xi, [self.args.warmup_momentum, self.args.momentum])
 
-                if hasattr(self.model, 'net_update_temperature'):
-                    temp = get_temperature(i + 1, epoch, len(self.train_loader), temp_epoch=20, temp_init_value=1.0)
-                    self.model.net_update_temperature(temp)
-                
                 # Forward
                 with autocast(self.amp):
                     batch = self.preprocess_batch(batch)

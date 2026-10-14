@@ -1,4 +1,4 @@
-# YOLO11x-seg with the pure Boundary Dice ablation branch (stage A).
+# YOLO11x-seg with PCSC boundary Dice supervision.
 nc: 80
 scales:
   n: [0.50, 0.25, 1024]

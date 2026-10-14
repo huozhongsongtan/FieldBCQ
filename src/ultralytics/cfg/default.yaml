@@ -98,68 +98,9 @@ warmup_bias_lr: 0.1 # (float) warmup initial bias lr
 box: 7.5 # (float) box loss gain
 cls: 0.5 # (float) cls loss gain (scale with pixels)
 dfl: 1.5 # (float) dfl loss gain
-boundary: 0.20 # (float) legacy BAS auxiliary boundary loss gain
-mpts_boundary: 0.10 # (float) MPTS prototype-boundary loss gain
-mpts_distance: 0.05 # (float) MPTS interior-distance loss gain
-mpts_separation: 0.00 # (float) MPTS adjacent-instance separation loss gain
-mpts_scale_normalized: False # (bool) normalize distance targets by equivalent parcel radius
-mpts_distance_radius: 8 # (int) maximum fixed-pixel distance at prototype resolution
-mpts_boundary_width: 1 # (int) boundary target width at prototype resolution
-mpts_adjacency_radius: 1 # (int) dilation radius used to identify adjacent parcels
-mpts_warmup_epochs: 5 # (int) epochs used to linearly warm up MPTS losses
+boundary: 0.20 # (float) PCSC / BAPS auxiliary boundary loss gain
 btq_quality: 0.25 # (float) mask-IoU and boundary-F1 quality calibration gain
-btq_point: 0.25 # (float) boundary and uncertain-point refinement loss gain
 btq_boundary_width: 2 # (int) boundary tolerance at prototype resolution
-btq_uncertain_points: 256 # (int) uncertain pixels sampled per positive instance
-btq_mask_nms_iou: 0.70 # (float) mask-IoU threshold for topology-preserving Mask-NMS
-btq_box_nms_iou: 0.95 # (float) permissive first-stage box NMS threshold
-btq_mask_nms_candidates: 1000 # (int) candidate limit before Mask-NMS
-harm_maskaware: 0.50 # (float) blend weight for mask-quality Top-K positive reassignment
-harm_refine: 0.50 # (float) instance-cascade refined-mask loss gain
-harm_boundary: 0.10 # (float) refined ROI boundary loss gain
-harm_topk: 2 # (int) mask-quality positives retained per GT instance
-harm_candidates: 10 # (int) existing assignment candidates evaluated per GT
-harm_max_instances: 12 # (int) maximum refined GT instances per image during training
-harm_quality_size: 40 # (int) low-resolution mask size used only for positive-quality ranking
-harm_warmup_epochs: 5 # (int) epochs used to warm up assignment and refinement losses
-harm_refine_batch: 64 # (int) post-NMS instances refined per inference chunk
-harm_runtime_refine: True # (bool) enable post-NMS cascade refinement in HARM validation
-psmf_dropout: 0.15 # (float) probability of hiding all E3 metadata during training
-psmf_feature_set: pall # (str) E3 inputs: p0, pg, ps, pf, pgs, or pall
-psmf_intervention: correct # (str) E3 metadata intervention used for validation
-psmf_counterfactual_scale: 1.0 # (float) fixed same-image scale used only for E3 validation
-psmf_rotate90: 0.5 # (float) probability of an exact 90/180/270-degree E3 training rotation
-ssc_routing_mode: hybrid # (str) SSC-MoE inputs: p0, visual, metadata, or hybrid
-ssc_temperature: 1.0 # (float) SSC-MoE routing softmax temperature
-ssc_balance: 0.01 # (float) expert utilization balance loss gain
-consistency_weight: 0.0 # (float) C GT-indexed instance consistency loss gain
-consistency_supervision: 0.5 # (float) supervised second-view loss weight
-consistency_boundary: 0.5 # (float) boundary term inside instance consistency
-consistency_probability: 0.5 # (float) probability of adding a second scale view per batch
-consistency_scale_min: 0.75 # (float) lower fixed-canvas scale factor for C
-consistency_scale_max: 1.33 # (float) upper fixed-canvas scale factor for C
-consistency_warmup_epochs: 5 # (int) epochs used to ramp C losses
-consistency_min_quality: 0.35 # (float) minimum teacher mask IoU for C matching
-consistency_min_pixels: 16 # (int) minimum valid prototype pixels for a matched instance
-fmsc_consistency: 0.05 # (float) FMSC feature consistency loss gain
-fmsc_strength: 0.20 # (float) bounded low/high-frequency feature perturbation strength
-fmsc_probability: 0.50 # (float) probability of applying FMSC to a training batch
-fmsc_noise: 0.10 # (float) high-frequency texture noise amplitude
-fmsc_resolution_strength: 0.20 # (float) coarse/fine resolution bridge strength
-fmsc_resolution_probability: 0.75 # (float) probability of applying the resolution bridge
-fmsc_coarse_probability: 0.75 # (float) probability of simulating the dominant coarse 10m style
-fmsc_warmup_epochs: 10 # (int) epochs used to ramp the FMSC consistency loss
-fmsc_kernel: 5 # (int) average-pooling kernel used as the low-frequency component
-cfa_consistency: 0.04 # (float) CFA structural feature consistency loss gain
-cfa_strength: 0.15 # (float) CFA residual adaptation strength
-cfa_probability: 0.75 # (float) probability of applying CFA during training
-cfa_high_suppression: 0.20 # (float) bounded suppression of high-frequency shortcuts
-cfa_token_scale: 0.10 # (float) learnable causal structural token scale
-cfa_warmup_epochs: 10 # (int) epochs used to ramp the CFA consistency loss
-style_strength: 0.60 # (float) strength of geometry-preserving style perturbation
-style_noise: 0.03 # (float) additive noise amplitude for C style view
-style_blur: 0.25 # (float) blend weight for the C style-view blur
-style_grayscale: 0.10 # (float) probability of grayscale channel response in C
 pose: 12.0 # (float) pose loss gain
 kobj: 1.0 # (float) keypoint obj loss gain
 label_smoothing: 0.0 # (float) label smoothing (fraction)

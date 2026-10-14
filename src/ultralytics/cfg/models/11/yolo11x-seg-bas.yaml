@@ -1,4 +1,4 @@
-# YOLO11x-seg with BAS + Boundary Dice (stage A+B).
+# YOLO11x-seg with BAPS + PCSC boundary supervision.
 nc: 80
 scales:
   n: [0.50, 0.25, 1024]

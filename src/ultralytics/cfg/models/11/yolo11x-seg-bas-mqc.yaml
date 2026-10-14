@@ -1,4 +1,4 @@
-# YOLO11x-seg with BAS + Boundary Dice + MQC (stage A+B+C).
+# FieldBCQ: YOLO11x-seg with BAPS + PCSC + RBQC.
 nc: 80
 scales:
   n: [0.50, 0.25, 1024]

@@ -23,23 +23,6 @@ DEFAULT_STD = (1.0, 1.0, 1.0)
 DEFAULT_CROP_FRACTION = 1.0
 
 
-def _update_psmf_scale(labels, scale_x, scale_y, output_width, output_height, counterfactual=False):
-    """Track effective pixel scale for PSMF through resize, crop, and padding operations."""
-    if "psmf_state" not in labels:
-        return
-    state = np.asarray(labels["psmf_state"], dtype=np.float32).copy()
-    # State layout: base GSD xy, cumulative scale xy, valid size xy, 5 sensor flags,
-    # GSD-valid, metadata-valid, and counterfactual scale xy.
-    state[2] *= float(scale_x)
-    state[3] *= float(scale_y)
-    state[4] = min(float(output_width), state[4] * float(scale_x))
-    state[5] = min(float(output_height), state[5] * float(scale_y))
-    if counterfactual:
-        state[13] *= float(scale_x)
-        state[14] *= float(scale_y)
-    labels["psmf_state"] = state
-
-
 class BaseTransform:
     """
     Base class for image transformations in the Ultralytics library.
@@ -1249,14 +1232,6 @@ class RandomPerspective:
         # M is affine matrix
         # Scale for func:`box_candidates`
         img, M, scale = self.affine_transform(img, border)
-        _update_psmf_scale(
-            labels,
-            scale,
-            scale,
-            self.size[0],
-            self.size[1],
-            counterfactual=bool(getattr(self, "psmf_counterfactual", False)),
-        )
 
         bboxes = self.apply_bboxes(instances.bboxes, M)
 
@@ -1612,7 +1587,6 @@ class LetterBox:
         img = cv2.copyMakeBorder(
             img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114)
         )  # add border
-        _update_psmf_scale(labels, ratio[0], ratio[1], img.shape[1], img.shape[0])
         if labels.get("ratio_pad"):
             labels["ratio_pad"] = (labels["ratio_pad"], (left, top))  # for evaluation
 

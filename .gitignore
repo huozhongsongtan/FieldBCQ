@@ -11,6 +11,11 @@ env/
 build/
 dist/
 
+# Generated experiment outputs (keep the reported CSV summaries)
+results/train/
+results/runs/
+results/source_eval/
+
 # Local credentials and configuration
 .env
 .env.*

@@ -63,7 +63,7 @@ class RelativePathTests(unittest.TestCase):
             try:
                 os.chdir(temporary)
                 with patch.object(self.train, "YOLO", return_value=model) as constructor:
-                    with patch.object(sys, "argv", ["train_paper.py", "--stage", "abc", "--no-pretrained"]):
+                    with patch.object(sys, "argv", ["train_paper.py", "--stage", "fieldbcq", "--no-pretrained"]):
                         self.train.main()
                 self.assertEqual(Path(constructor.call_args.args[0]), ROOT / "src/ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml")
                 self.assertEqual(Path(model.train.call_args.kwargs["data"]), ROOT / "data/datasets.yaml")
@@ -72,13 +72,15 @@ class RelativePathTests(unittest.TestCase):
                 os.chdir(old_cwd)
 
     def test_public_training_names_select_expected_model_and_losses(self):
+        self.assertEqual(set(self.train.STAGES), {"baseline", "pcsc", "baps_pcsc", "fieldbcq"})
+        for stage in self.train.STAGES.values():
+            self.assertTrue((ROOT / "src" / stage["model"]).is_file())
         configurations = [
             ("pcsc", "yolo11x-seg-boundary-dice.yaml", {"boundary": 0.20}),
             ("baps_pcsc", "yolo11x-seg-bas.yaml", {"boundary": 0.20}),
             ("fieldbcq", "yolo11x-seg-bas-mqc.yaml", {
                 "boundary": 0.20,
                 "btq_quality": 0.25,
-                "btq_point": 0.0,
                 "btq_boundary_width": 2,
             }),
         ]

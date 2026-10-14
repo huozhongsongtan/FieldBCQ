@@ -14,67 +14,26 @@ STAGES = {
         "name": "baseline",
         "overrides": {},
     },
-    "a": {
+    "pcsc": {
         "model": "ultralytics/cfg/models/11/yolo11x-seg-boundary-dice.yaml",
-        "name": "a_boundary_dice",
+        "name": "pcsc",
         "overrides": {"boundary": 0.20},
     },
-    "b": {
-        "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-only.yaml",
-        "name": "b_bas",
-        "overrides": {"boundary": 0.20},
-    },
-    "c": {
-        "model": "ultralytics/cfg/models/11/yolo11x-seg-mqc.yaml",
-        "name": "c_mqc",
-        "overrides": {
-            "btq_quality": 0.25,
-            "btq_point": 0.0,
-            "btq_boundary_width": 2,
-        },
-    },
-    "ab": {
+    "baps_pcsc": {
         "model": "ultralytics/cfg/models/11/yolo11x-seg-bas.yaml",
-        "name": "ab_bas_boundary_dice",
+        "name": "baps_pcsc",
         "overrides": {"boundary": 0.20},
     },
-    "ac": {
-        "model": "ultralytics/cfg/models/11/yolo11x-seg-boundary-dice-mqc.yaml",
-        "name": "ac_boundary_dice_mqc",
-        "overrides": {
-            "boundary": 0.20,
-            "btq_quality": 0.25,
-            "btq_point": 0.0,
-            "btq_boundary_width": 2,
-        },
-    },
-    "bc": {
-        "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-only-mqc.yaml",
-        "name": "bc_bas_mqc",
-        "overrides": {
-            "boundary": 0.20,
-            "btq_quality": 0.25,
-            "btq_point": 0.0,
-            "btq_boundary_width": 2,
-        },
-    },
-    "abc": {
+    "fieldbcq": {
         "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml",
-        "name": "abc_bas_boundary_dice_mqc",
+        "name": "fieldbcq",
         "overrides": {
             "boundary": 0.20,
             "btq_quality": 0.25,
-            "btq_point": 0.0,
             "btq_boundary_width": 2,
         },
     },
 }
-
-STAGES.update({
-    "pcsc": {**STAGES["a"], "name": "pcsc"},
-    "baps_pcsc": {**STAGES["ab"], "name": "baps_pcsc"},
-    "fieldbcq": {**STAGES["abc"], "name": "fieldbcq"},
-})
 
 
 def parse_args():

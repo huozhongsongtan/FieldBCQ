@@ -75,7 +75,7 @@ from .conv import (
     RepConv,
     SpatialAttention,
 )
-from .head import BASBTQCFASegment, BASBTQDCSCSegment, BASBTQFMSCSegment, BASBTQPSMFSegment, BASBTQSSCMoESegment, BASBTQSegment, BASMQCSegment, BASMQCSGPSMFSegment, BASMQCSGSegment, BASOnlyMQCSegment, BASPSMFSegment, BoundaryDiceMQCSegment, BTQSegment, HARMSegment, MQCSegment, MPTSSegment, OBB, Classify, Detect, Pose, RTDETRDecoder, Segment, WorldDetect, v10Detect
+from .head import BASMQCSegment, OBB, Classify, Detect, Pose, RTDETRDecoder, Segment, WorldDetect, v10Detect
 from .transformer import (
     AIFI,
     MLP,
@@ -132,22 +132,7 @@ __all__ = (
     "Proto",
     "Detect",
     "Segment",
-    "MPTSSegment",
-    "BTQSegment",
-    "MQCSegment",
     "BASMQCSegment",
-    "BASOnlyMQCSegment",
-    "BoundaryDiceMQCSegment",
-    "BASMQCSGSegment",
-    "BASMQCSGPSMFSegment",
-    "BASPSMFSegment",
-    "BASBTQSegment",
-    "BASBTQDCSCSegment",
-    "BASBTQFMSCSegment",
-    "BASBTQCFASegment",
-    "BASBTQPSMFSegment",
-    "BASBTQSSCMoESegment",
-    "HARMSegment",
     "Pose",
     "Classify",
     "TransformerEncoderLayer",

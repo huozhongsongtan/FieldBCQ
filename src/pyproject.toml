@@ -1,52 +1,30 @@
-# Ultralytics YOLO 🚀, AGPL-3.0 license
-
-# Overview:
-# This pyproject.toml file manages the build, packaging, and distribution of the Ultralytics library.
-# It defines essential project metadata, dependencies, and settings used to develop and deploy the library.
-
-# Key Sections:
-# - [build-system]: Specifies the build requirements and backend (e.g., setuptools, wheel).
-# - [project]: Includes details like name, version, description, authors, dependencies and more.
-# - [project.optional-dependencies]: Provides additional, optional packages for extended features.
-# - [tool.*]: Configures settings for various tools (pytest, yapf, etc.) used in the project.
-
-# Installation:
-# The Ultralytics library can be installed using the command: 'pip install ultralytics'
-# For development purposes, you can install the package in editable mode with: 'pip install -e .'
-# This approach allows for real-time code modifications without the need for re-installation.
-
-# Documentation:
-# For comprehensive documentation and usage instructions, visit: https://docs.ultralytics.com
+# Ultralytics YOLO, AGPL-3.0 license
+# Focused FieldBCQ fork; retain the distribution name for checkpoint compatibility.
 
 [build-system]
-requires = ["setuptools>=70.0.0", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 # Project settings -----------------------------------------------------------------------------------------------------
 [project]
 name = "ultralytics"
 dynamic = ["version"]
-description = "Ultralytics YOLO for SOTA object detection, multi-object tracking, instance segmentation, pose estimation and image classification."
+description = "FieldBCQ: boundary supervision, contour consistency and quality calibration for farmland parcel instance segmentation."
 readme = "README.md"
-requires-python = ">=3.8"
-license = { "text" = "AGPL-3.0" }
-keywords = ["machine-learning", "deep-learning", "computer-vision", "ML", "DL", "AI", "YOLO", "YOLOv3", "YOLOv5", "YOLOv8", "YOLOv9", "YOLOv10", "YOLO11", "HUB", "Ultralytics"]
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+keywords = ["instance-segmentation", "farmland", "remote-sensing", "FieldBCQ", "YOLO11"]
 authors = [
     { name = "Glenn Jocher", email = "glenn.jocher@ultralytics.com" },
     { name = "Jing Qiu", email = "jing.qiu@ultralytics.com" },
-]
-maintainers = [
-    { name = "Ultralytics", email = "hello@ultralytics.com" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -68,9 +46,9 @@ dependencies = [
     "pyyaml>=5.3.1",
     "requests>=2.23.0",
     "scipy>=1.4.1",
-    "torch>=1.8.0",
-    "torch>=1.8.0,!=2.4.0; sys_platform == 'win32'", # Windows CPU errors w/ 2.4.0 https://github.com/ultralytics/ultralytics/issues/15049
-    "torchvision>=0.9.0",
+    "torch>=1.13.0; sys_platform != 'win32'",
+    "torch>=1.13.0,!=2.4.0; sys_platform == 'win32'", # Windows CPU errors w/ 2.4.0 https://github.com/ultralytics/ultralytics/issues/15049
+    "torchvision>=0.14.0",
     "tqdm>=4.64.0", # progress bars
     "psutil", # system utilization
     "py-cpuinfo", # display CPU info
@@ -86,13 +64,6 @@ dev = [
     "pytest",
     "pytest-cov",
     "coverage[toml]",
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.5.9",
-    "mkdocstrings[python]",
-    "mkdocs-jupyter", # notebooks
-    "mkdocs-redirects", # 301 redirects
-    "mkdocs-ultralytics-plugin>=0.1.8", # for meta descriptions and images, dates and authors
-    "mkdocs-macros-plugin>=1.0.5"  # duplicating content (i.e. export tables) in multiple places
 ]
 export = [
     "onnx>=1.12.0", # ONNX export
@@ -125,11 +96,10 @@ extra = [
 ]
 
 [project.urls]
-"Homepage" = "https://ultralytics.com"
-"Source" = "https://github.com/ultralytics/ultralytics"
-"Documentation" = "https://docs.ultralytics.com"
-"Bug Reports" = "https://github.com/ultralytics/ultralytics/issues"
-"Changelog" = "https://github.com/ultralytics/ultralytics/releases"
+"Source" = "https://github.com/huozhongsongtan/FieldBCQ"
+"Documentation" = "https://github.com/huozhongsongtan/FieldBCQ#readme"
+"Bug Reports" = "https://github.com/huozhongsongtan/FieldBCQ/issues"
+"Upstream" = "https://github.com/ultralytics/ultralytics"
 
 [project.scripts]
 yolo = "ultralytics.cfg:entrypoint"
@@ -138,7 +108,7 @@ ultralytics = "ultralytics.cfg:entrypoint"
 # Tools settings -------------------------------------------------------------------------------------------------------
 [tool.setuptools]  # configuration specific to the `setuptools` build backend.
 packages = { find = { where = ["."], include = ["ultralytics", "ultralytics.*"] } }
-package-data = { "ultralytics" = ["**/*.yaml", "../tests/*.py"], "ultralytics.assets" = ["*.jpg"] }
+package-data = { "ultralytics" = ["**/*.yaml"] }
 
 [tool.setuptools.dynamic]
 version = { attr = "ultralytics.__version__" }

@@ -6,7 +6,7 @@ FieldBCQ is a farmland parcel instance segmentation framework built on YOLO11x-s
 
 The study uses **AgriParcel-MR26: A Multi-Country, Multi-Resolution Farmland Parcel Instance Segmentation Dataset**, containing **15,000 remote-sensing images**, **15,000 matching annotation files**, and **403,199 parcel instances** across **26 countries**. It spans **8 sensor spatial resolution categories**, ranging from **0.25 m to 10 m**.
 
-On the fixed AgriParcel-MR26 test split, the paper reports a three-run mean **Mask mAP50-95 of 0.420 +/- 0.004** for FieldBCQ. This repository includes the implementation, four trained checkpoints, dataset statistics, paper-reported performance summaries, and bilingual architecture figures.
+On the fixed AgriParcel-MR26 test split, the paper reports a three-run mean **Mask mAP50-95 of 0.420 +/- 0.004** for FieldBCQ. This repository includes the implementation, four trained checkpoints, dataset statistics, and paper-reported performance summaries.
 
 ## Method
 
@@ -78,23 +78,24 @@ Equivalent units are consolidated: 1 m and 100 cm are counted together, as are 3
 
 ### Country Distribution
 
-AgriParcel-MR26 covers **26 countries**. Regional identifiers are consolidated at the country level; Corsica is counted under France.
+AgriParcel-MR26 covers **26 countries**. To keep the summary consistent with the distribution chart and avoid overemphasizing very small groups, the main table reports the 10 countries with the most images individually and aggregates the remaining 16 countries. Regional identifiers are consolidated at the country level; Corsica is counted under France.
 
-| Country | Images | Parcel Instances | Country | Images | Parcel Instances |
-|---|---:|---:|---|---:|---:|
-| China | 5,250 | 85,660 | France | 3,389 | 212,940 |
-| Slovakia | 2,885 | 38,112 | Ukraine | 1,869 | 12,725 |
-| Austria | 244 | 11,515 | Netherlands | 145 | 4,528 |
-| Sweden | 150 | 2,812 | Latvia | 141 | 1,307 |
-| Spain | 121 | 7,929 | Estonia | 118 | 959 |
-| Lithuania | 117 | 2,166 | Finland | 113 | 2,204 |
-| Denmark | 93 | 1,287 | Croatia | 78 | 4,718 |
-| Slovenia | 75 | 3,561 | Belgium | 49 | 1,582 |
-| India | 44 | 192 | Brazil | 42 | 171 |
-| Luxembourg | 33 | 1,588 | South Africa | 15 | 186 |
-| Cambodia | 9 | 4,337 | Vietnam | 9 | 2,544 |
-| Germany | 4 | 72 | Kenya | 4 | 5 |
-| Rwanda | 2 | 46 | Portugal | 1 | 53 |
+| Country / group | Images | Parcel Instances |
+|---|---:|---:|
+| China | 5,250 | 85,660 |
+| France | 3,389 | 212,940 |
+| Slovakia | 2,885 | 38,112 |
+| Ukraine | 1,869 | 12,725 |
+| Austria | 244 | 11,515 |
+| Sweden | 150 | 2,812 |
+| Netherlands | 145 | 4,528 |
+| Latvia | 141 | 1,307 |
+| Spain | 121 | 7,929 |
+| Estonia | 118 | 959 |
+| Other 16 countries | 688 | 24,712 |
+| **Total** | **15,000** | **403,199** |
+
+The **Other 16 countries** group contains Lithuania, Finland, Denmark, Croatia, Slovenia, Belgium, India, Brazil, Luxembourg, South Africa, Cambodia, Vietnam, Germany, Kenya, Rwanda, and Portugal.
 
 The geographic coverage and sensor-resolution range provide varied conditions for evaluating parcel segmentation across agricultural landscapes.
 
@@ -158,14 +159,13 @@ From the directory containing the project:
 cd ./FieldBCQ
 ```
 
-Use Python 3.10 with PyTorch and torchvision versions suitable for your hardware. Install the local Ultralytics source and the additional packages used by its custom layers:
+Use Python 3.10 with PyTorch and torchvision versions suitable for your hardware. Install the local Ultralytics source:
 
 ```powershell
 python -m pip install -e ./src
-python -m pip install timm einops
 ```
 
-Package dependencies are listed in [pyproject.toml](./src/pyproject.toml). A complete pinned training environment is not included. Check that Python imports the project's custom implementation:
+The public configurations use PyTorch layers only; optional experimental backbones and native extensions have been removed. The distribution and import name remain `ultralytics` for checkpoint compatibility. Use a dedicated environment to avoid replacing another Ultralytics installation. Package dependencies are listed in [pyproject.toml](./src/pyproject.toml). A complete pinned training environment is not included. Check that Python imports the project's custom implementation:
 
 ```powershell
 python -c "import ultralytics; print(ultralytics.__file__)"
@@ -205,7 +205,7 @@ Scripts store writable Ultralytics settings under `./results/runtime_config` unl
 
 ### Verification and Outputs
 
-Check path portability and the documented configuration names without loading weights or running inference:
+Check path portability, configuration construction, inference, and synthetic training losses:
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -220,24 +220,28 @@ FieldBCQ/
 |-- README.md
 |-- data/
 |   `-- datasets.yaml                  # AgriParcel-MR26 configuration
-|-- model/                            # four trained configuration checkpoints
+|-- model/                            # four archived checkpoints (Git LFS)
 |-- src/
 |   |-- scripts/                      # training, evaluation, and analysis
-|   |-- ultralytics/                  # custom model heads, losses, and definitions
+|   |-- ultralytics/                  # base framework and public FieldBCQ implementation
+|   |   |-- nn/modules/head.py        # RBQC head, BASMQCSegment
+|   |   |-- nn/extra_modules/head.py  # historical boundary-head import paths
+|   |   `-- utils/loss.py             # PCSC, BAPS + PCSC, and FieldBCQ losses
+|   |-- README.md                     # Python package description
 |   |-- pyproject.toml
 |   `-- LICENSE
-|-- tests/
-|   `-- test_relative_paths.py
-|-- results/
-|   |-- metrics_summary.csv
-|   `-- dataset_split.csv
-`-- fig/
-    |-- draw_fieldbcq_architecture.py
-    |-- fieldbcq_architecture_notes.md
-    |-- fieldbcq_architecture_en.png
-    |-- fieldbcq_architecture_zh.png
-    |-- fieldbcq_architecture_*.svg
-    `-- fieldbcq_architecture_*.pdf
+|-- tests/                            # portability and model regression tests
+`-- results/
+    |-- metrics_summary.csv
+    `-- dataset_split.csv
 ```
 
-Experiment output directories such as `./results/train` and `./results/runs` are created when training or evaluation is run.
+Only `baseline`, `pcsc`, `baps_pcsc`, and `fieldbcq` are accepted by the training script. Archived checkpoint folders `a`, `ab`, and `abc`, and the original Python class paths, are retained so existing weights continue to load. Upstream framework utilities remain available to support training, validation, prediction, and checkpoint loading; unrelated experimental backbones and native extensions are excluded.
+
+Experiment output directories such as `./results/train` and `./results/runs` are created when training or evaluation is run. Generated outputs and temporary runtime settings are ignored by Git.
+
+To also verify inference from all four archived checkpoints:
+
+```powershell
+python src/scripts/check_paper_models.py --checkpoints
+```
