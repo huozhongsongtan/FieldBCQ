@@ -4,7 +4,7 @@
 
 FieldBCQ is a farmland parcel instance segmentation framework built on YOLO11x-seg. Its three improvements target the segmentation head, the training loss, and inference-time post-processing: **Boundary-Aware Pixel Supervision (BAPS)**, **Parcel Contour Structural Consistency Constraint (PCSC)**, and **Region-Boundary Quality Calibration (RBQC)**.
 
-The study uses **AgriParcel-MR26: A Multi-Country, Multi-Resolution Farmland Parcel Instance Segmentation Dataset**, containing **15,000 remote-sensing images**, **15,000 matching annotation files**, and **403,199 parcel instances** across **26 countries**. It spans **8 sensor spatial resolution categories**, ranging from **0.25 m to 10 m**.
+The study uses **AgriParcel-MR26: A Multi-Country, Multi-Resolution Farmland Parcel Instance Segmentation Dataset**, containing **15,000 remote-sensing images**, **15,000 matching annotation files**, and **403,199 parcel instances** across **26 countries**. It spans **8 nominal spatial resolution categories**, ranging from **0.25 m to 10 m**.
 
 On the fixed AgriParcel-MR26 test split, the paper reports a three-run mean **Mask mAP50-95 of 0.420 +/- 0.004** for FieldBCQ. This repository includes the implementation, four trained checkpoints, dataset statistics, and paper-reported performance summaries.
 
@@ -45,7 +45,20 @@ Each configuration includes one trained checkpoint. The individual checkpoints h
 
 **AgriParcel-MR26: A Multi-Country, Multi-Resolution Farmland Parcel Instance Segmentation Dataset** is the dataset used throughout this study. It contains **15,000 images**, **15,000 corresponding annotation files**, and **403,199 farmland parcel instances**. Each parcel is represented by an instance polygon, with one instance per annotation line.
 
-The name reflects the dataset's defining properties: **AgriParcel** identifies agricultural parcel instances, **MR** denotes multiple sensor spatial resolutions, and **26** denotes the number of countries. Its eight sensor-resolution categories span 0.25-10 m across varied agricultural landscapes.
+The name reflects the dataset's defining properties: **AgriParcel** identifies agricultural parcel instances, **MR** denotes multiple nominal spatial resolutions, and **26** denotes the number of countries. Its eight nominal-resolution categories span 0.25-10 m across varied agricultural landscapes.
+
+### Dataset Sources
+
+AgriParcel-MR26 was assembled from three public agricultural parcel datasets:
+
+| Source | Images | Parcel Instances | Train / Val / Test |
+|---|---:|---:|---:|
+| FBIS | 8,250 | 275,357 | 6,600 / 550 / 1,100 |
+| Fields of The World (FTW) | 1,500 | 42,182 | 1,200 / 100 / 200 |
+| FHAPD | 5,250 | 85,660 | 4,200 / 350 / 700 |
+| **Total** | **15,000** | **403,199** | **12,000 / 1,000 / 2,000** |
+
+The training, validation, and test sets contain 12,000, 1,000, and 2,000 images, respectively. No scene, tile, or parcel is shared between the training and test sets. The source papers are [FBIS](https://arxiv.org/abs/2504.02534), [FTW](https://doi.org/10.1609/aaai.v39i27.35034), and [FHAPD](https://doi.org/10.1016/j.isprsjprs.2025.01.034). FHAPD is accessed through the authors' [HBGNet repository](https://github.com/NanNanmei/HBGNet).
 
 ### Dataset Split
 
@@ -58,23 +71,23 @@ The name reflects the dataset's defining properties: **AgriParcel** identifies a
 
 The test split includes **83 empty-label images**, which remain in the evaluation set as negative samples. The paper uses the `test.cache` counting convention. Keep the same image membership when comparing configurations. Split counts are also provided in [dataset_split.csv](./results/dataset_split.csv).
 
-### Sensor Spatial Resolutions
+### Nominal Spatial Resolutions
 
-Resolution values refer to **sensor spatial resolution in metres**.
+Resolution values refer to **source-reported nominal spatial resolution in metres**. All 15,000 images are assigned to one of the eight categories below.
 
-| Sensor Spatial Resolution | Images | Parcel Instances |
-|---:|---:|---:|
-| 0.25 m | 60 | 118 |
-| 0.30 m | 769 | 1,740 |
-| 0.50 m | 255 | 561 |
-| 1.00 m | 285 | 4,012 |
-| 1.20 m | 287 | 2,367 |
-| 2.00 m | 80 | 798 |
-| 3.00 m | 1,778 | 41,977 |
-| 10.00 m | 11,486 | 351,626 |
-| **Total** | **15,000** | **403,199** |
+| Nominal Spatial Resolution | Images | Parcel Instances | Train / Val / Test |
+|---:|---:|---:|---:|
+| 0.25 m | 60 | 118 | 55 / 5 / 0 |
+| 0.30 m | 769 | 1,740 | 248 / 21 / 500 |
+| 0.50 m | 255 | 561 | 65 / 5 / 185 |
+| 1.00 m | 3,983 | 69,594 | 2,917 / 243 / 823 |
+| 1.20 m | 287 | 2,367 | 231 / 19 / 37 |
+| 2.00 m | 1,632 | 20,876 | 1,448 / 121 / 63 |
+| 3.00 m | 1,778 | 41,977 | 1,519 / 126 / 133 |
+| 10.00 m | 6,236 | 265,966 | 5,517 / 460 / 259 |
+| **Total** | **15,000** | **403,199** | **12,000 / 1,000 / 2,000** |
 
-Equivalent units are consolidated: 1 m and 100 cm are counted together, as are 3 m and 300 cm.
+FBIS values follow the nominal values retained with the files. FTW is grouped at the nominal 10 m resolution of its Sentinel-2 source bands. The FHAPD local subset uses nominal 1 m for Hebei, Henan, Jiangsu, Sichuan, Hunan, and Xinjiang, and nominal 2 m for Heilongjiang (local code DB), Chongqing, and Gansu. The 2 m group therefore includes 80 FBIS images and 1,552 FHAPD images.
 
 ### Country Distribution
 
@@ -97,7 +110,7 @@ AgriParcel-MR26 covers **26 countries**. To keep the summary consistent with the
 
 The **Other 16 countries** group contains Lithuania, Finland, Denmark, Croatia, Slovenia, Belgium, India, Brazil, Luxembourg, South Africa, Cambodia, Vietnam, Germany, Kenya, Rwanda, and Portugal.
 
-The geographic coverage and sensor-resolution range provide varied conditions for evaluating parcel segmentation across agricultural landscapes.
+The geographic coverage and nominal-resolution range provide varied conditions for evaluating parcel segmentation across agricultural landscapes.
 
 ### Annotation Format and Preparation
 
@@ -199,7 +212,7 @@ The evaluation names are `baseline`, `pcsc`, `baps_pcsc`, and `fieldbcq`. The sc
 
 For a single checkpoint, use [val_paper.py](./src/scripts/val_paper.py) with `--weights` pointing to a checkpoint from the configuration table and `--name` set to the configuration name. New evaluations of individual checkpoints do not recreate the paper's three-run summaries.
 
-For country- or sensor-resolution evaluation, prepare a dataset YAML referencing the verified test image list for each group and pass it through `--data`. Use the same group membership for every configuration.
+For country- or nominal-resolution evaluation, prepare a dataset YAML referencing the verified test image list for each group and pass it through `--data`. Use the same group membership for every configuration.
 
 Scripts store writable Ultralytics settings under `./results/runtime_config` unless `YOLO_CONFIG_DIR` is already defined.
 
