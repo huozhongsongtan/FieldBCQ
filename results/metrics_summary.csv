@@ -1,5 +1,5 @@
 paper_stage,precision_mean,precision_std,recall_mean,recall_std,f1_mean,f1_std,map50_mean,map50_std,map75_mean,map75_std,map50_95_mean,map50_95_std,test_images,test_instances,source
-Baseline,0.663,0.012,0.600,0.001,0.630,0.005,0.611,0.007,0.400,0.008,0.390,0.006,2000,21190,AgriParcel-MR26 paper summary
-PCSC,0.672,0.004,0.606,0.004,0.637,0.004,0.622,0.004,0.411,0.002,0.400,0.002,2000,21190,AgriParcel-MR26 paper summary
-BAPS + PCSC,0.673,0.001,0.614,0.003,0.642,0.001,0.628,0.004,0.415,0.002,0.405,0.003,2000,21190,AgriParcel-MR26 paper summary
-FieldBCQ,0.694,0.007,0.615,0.002,0.652,0.003,0.640,0.004,0.434,0.003,0.420,0.004,2000,21190,AgriParcel-MR26 paper summary
+Baseline,0.663,0.012,0.600,0.001,0.630,0.005,0.611,0.007,0.400,0.008,0.390,0.006,2000,21190,AgriParcel-MS paper summary
+BDS,0.672,0.004,0.606,0.004,0.637,0.004,0.622,0.004,0.411,0.002,0.400,0.002,2000,21190,AgriParcel-MS paper summary
+BAPS + BDS,0.673,0.001,0.614,0.003,0.642,0.001,0.628,0.004,0.415,0.002,0.405,0.003,2000,21190,AgriParcel-MS paper summary
+FieldBCQ,0.694,0.007,0.615,0.002,0.652,0.003,0.640,0.004,0.434,0.003,0.420,0.004,2000,21190,AgriParcel-MS paper summary

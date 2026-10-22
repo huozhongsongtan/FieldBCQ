@@ -1,4 +1,4 @@
 split,images,instances,purpose,source
-Train,12000,353352,parameter learning,AgriParcel-MR26 paper summary
-Val,1000,28657,hyperparameter and checkpoint selection,AgriParcel-MR26 paper summary
-Test,2000,21190,final evaluation,AgriParcel-MR26 paper summary
+Train,12000,353352,parameter learning,AgriParcel-MS paper summary
+Val,1000,28657,hyperparameter and checkpoint selection,AgriParcel-MS paper summary
+Test,2000,21190,final evaluation,AgriParcel-MS paper summary
