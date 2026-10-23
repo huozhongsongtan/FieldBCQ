@@ -88,6 +88,8 @@ def configuration_of(model):
     mode = args.get("boundary_mode", "dice_bce") if isinstance(args, dict) else getattr(args, "boundary_mode", "dice_bce")
     if name == "BASMQCSegment":
         return "fieldbcq"
+    if name == "BASSegment":
+        return "baps"
     if name == "Segment_BAS":
         return "baps" if mode == "bce" else "baps_pcsc"
     if name == "BoundaryDiceSegment":

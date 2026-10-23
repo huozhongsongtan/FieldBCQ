@@ -1,5 +1,5 @@
-"""Boundary supervision heads for the four public FieldBCQ configurations."""
+"""Boundary supervision heads and historical checkpoint compatibility."""
 
-from .head import BoundaryDiceSegment, Segment_BAS
+from .head import BoundaryDiceSegment, BASSegment, Segment_BAS
 
-__all__ = ("BoundaryDiceSegment", "Segment_BAS")
+__all__ = ("BoundaryDiceSegment", "BASSegment", "Segment_BAS")

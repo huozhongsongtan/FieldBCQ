@@ -62,7 +62,7 @@ from ultralytics.nn.modules import (
     CBAM,
     A2C2f
 )
-from ultralytics.nn.extra_modules.head import BoundaryDiceSegment, Segment_BAS
+from ultralytics.nn.extra_modules.head import BoundaryDiceSegment, BASSegment, Segment_BAS
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import (
@@ -98,7 +98,7 @@ except ImportError:
 
 DETECT_CLASS = (Detect,)
 V10_DETECT_CLASS = (v10Detect,)
-SEGMENT_CLASS = (Segment, BoundaryDiceSegment, Segment_BAS, BASMQCSegment)
+SEGMENT_CLASS = (Segment, BoundaryDiceSegment, BASSegment, Segment_BAS, BASMQCSegment)
 POSE_CLASS = (Pose,)
 OBB_CLASS = (OBB,)
 
@@ -438,6 +438,8 @@ class SegmentationModel(DetectionModel):
         head = self.model[-1]
         if isinstance(head, BASMQCSegment):
             return v8BASMQCSegmentationLoss(self)
+        if isinstance(head, BASSegment):
+            return v8BAPSSegmentationLoss(self)
         if isinstance(head, Segment_BAS):
             mode = self.args.get("boundary_mode", "dice_bce") if isinstance(self.args, dict) else getattr(self.args, "boundary_mode", "dice_bce")
             if mode == "bce":

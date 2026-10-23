@@ -565,6 +565,11 @@ class v8BAPSSegmentationLoss(v8BASSegmentationLoss):
         return F.binary_cross_entropy_with_logits(logits, target)
 
 
+class v8BASOnlySegmentationLoss(v8BAPSSegmentationLoss):
+    """Historical BCE-only loss name retained for serialized checkpoints."""
+    pass
+
+
 class v8BoundaryDiceSegmentationLoss(v8BASSegmentationLoss):
     """PCSC boundary overlap supervision."""
 

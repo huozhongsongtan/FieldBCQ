@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from ..modules import Conv, Detect, Segment
 
-__all__ = ("BoundaryDiceSegment", "Segment_BAS")
+__all__ = ("BoundaryDiceSegment", "BASSegment", "Segment_BAS")
 
 
 class BoundaryDiceSegment(Segment):
@@ -25,6 +25,11 @@ class BoundaryDiceSegment(Segment):
         if self.training:
             return y, mc, p, boundary_logits
         return (torch.cat([y, mc], 1), p) if self.export else (torch.cat([y[0], mc], 1), (y[1], mc, p))
+
+
+class BASSegment(BoundaryDiceSegment):
+    """Historical BAPS-only head, kept at its serialized checkpoint import path."""
+    pass
 
 
 class Segment_BAS(BoundaryDiceSegment):
