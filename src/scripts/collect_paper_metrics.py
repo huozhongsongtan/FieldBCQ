@@ -6,12 +6,14 @@ Example: python src/scripts/collect_paper_metrics.py --weights baps=results/trai
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import gc
 import hashlib
 import json
 from pathlib import Path
 
+from quality_scoring import QUALITY_MODES, set_quality_scoring
 from project_paths import project_path, relative_or_absolute
 from paper_runtime import EVALUATOR_VERSION, benchmark, code_provenance, configuration_of, environment, sha256, write_json
 
@@ -35,7 +37,10 @@ def parse_args():
     parser.add_argument("--max-det", type=int, default=710)
     parser.add_argument("--boundary-tolerance", type=int, default=2)
     parser.add_argument("--small-area", type=int, default=1024, help="GT area in square letterboxed evaluation pixels.")
-    parser.add_argument("--quality-blend", type=float, choices=(0.0, 1.0), help="Full-model C0=0, C2=1; same checkpoint.")
+    scoring = parser.add_mutually_exclusive_group()
+    scoring.add_argument("--quality-blend", type=float, choices=(0.0, 1.0), help="Legacy C0/C2 switch.")
+    scoring.add_argument("--quality-mode", choices=(*QUALITY_MODES, "all"),
+                         help="class/region/boundary/joint; all evaluates each checkpoint four times.")
     parser.add_argument("--warmup", type=int, default=20)
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--skip-benchmark", action="store_true")
@@ -96,6 +101,36 @@ def load_targets(label, original_shape, size):
     return np.asarray(masks, dtype=bool).reshape(-1, size, size), np.asarray(classes, dtype=int), scale
 
 
+def square_evaluation_masks(masks, original_shape, size):
+    """Translate rect input-grid masks to the square GT grid, preserving every pixel.
+
+    Prediction uses the same longest-side scale as the square grid, but can omit
+    stride-aligned padding. Restore only that padding; never stretch contours.
+    """
+    import numpy as np
+    masks = np.asarray(masks, dtype=bool)
+    if masks.ndim != 3 or size <= 0 or min(original_shape) <= 0:
+        raise ValueError("Expected N,H,W masks and positive original/image sizes")
+    height, width = original_shape
+    gain = min(size / height, size / width)
+    content_h, content_w = round(height * gain), round(width * gain)
+    mask_h, mask_w = masks.shape[1:]
+    if not (content_h <= mask_h <= size and content_w <= mask_w <= size):
+        raise ValueError(f"Mask grid {masks.shape[1:]} is incompatible with imgsz={size}, original={original_shape}")
+    square_top = round((size - content_h) / 2 - 0.1)
+    square_left = round((size - content_w) / 2 - 0.1)
+    rect_top = round((mask_h - content_h) / 2 - 0.1)
+    rect_left = round((mask_w - content_w) / 2 - 0.1)
+    top, left = square_top - rect_top, square_left - rect_left
+    if top < 0 or left < 0 or top + mask_h > size or left + mask_w > size:
+        raise ValueError("Rectangular padding does not align with the square evaluation grid")
+    if (mask_h, mask_w) == (size, size):
+        return masks
+    output = np.zeros((len(masks), size, size), dtype=bool)
+    output[:, top:top + mask_h, left:left + mask_w] = masks
+    return output
+
+
 def metric_values(result):
     output = {}
     for key, value in (("box", result.box), ("mask", result.seg)):
@@ -114,21 +149,15 @@ def collect_one(args, name, weights, data_path, root, images, labels, metadata, 
     output = project_path(args.project) / name
     if output.exists():
         raise FileExistsError(f"Refusing to mix evaluations in existing directory: {output}; choose another --project/name")
-    output.mkdir(parents=True)
     wrapper = YOLO(str(weights))
     actual = configuration_of(wrapper.model)
-    head = wrapper.model.model[-1]
-    if args.quality_blend is not None:
-        if not hasattr(head, "quality_blend"):
-            raise ValueError("--quality-blend requires a FieldBCQ quality-head checkpoint")
-        head.quality_blend = args.quality_blend
-    effective_quality_blend = getattr(head, "quality_blend", None)
-    del head
+    scoring = set_quality_scoring(wrapper.model, args.quality_mode, args.quality_blend)
+    output.mkdir(parents=True)
     stored_args = dict((wrapper.ckpt or {}).get("train_args", getattr(wrapper.model, "args", {})))
     checkpoint_hash = sha256(weights)
     half = args.precision == "fp16"
     common = dict(imgsz=args.imgsz, batch=args.batch, device=args.device, half=half,
-                  conf=args.predict_conf, iou=args.iou, max_det=args.max_det, rect=False, verbose=False)
+                  conf=args.predict_conf, iou=args.iou, max_det=args.max_det, rect=True, augment=False, verbose=False)
     native = wrapper.val(data=str(data_path), split=args.split, workers=args.workers,
                          project=str(output), name="native", plots=args.plots, **common)
     native_values = metric_values(native)
@@ -137,8 +166,7 @@ def collect_one(args, name, weights, data_path, root, images, labels, metadata, 
     del wrapper
     gc.collect()
     wrapper = YOLO(str(weights))
-    if args.quality_blend is not None:
-        wrapper.model.model[-1].quality_blend = args.quality_blend
+    set_quality_scoring(wrapper.model, args.quality_mode, args.quality_blend)
     records, groups, image_rows, sample_images = [], {}, [], []
     for start in range(0, len(images), args.batch):
         selected = images[start:start + args.batch]
@@ -156,8 +184,7 @@ def collect_one(args, name, weights, data_path, root, images, labels, metadata, 
                 masks = prediction.masks.data.cpu().numpy().astype(bool)
                 scores = prediction.boxes.conf.cpu().numpy()
                 classes = prediction.boxes.cls.cpu().numpy().astype(int)
-                if masks.shape[1:] != (args.imgsz, args.imgsz):
-                    raise RuntimeError(f"Expected square input-grid masks, got {masks.shape}; check rect=False")
+                masks = square_evaluation_masks(masks, prediction.orig_shape, args.imgsz)
             keep = scores >= args.conf
             meta = metadata.get(path, {})
             px, py = meta.get("pixel_size_x_m"), meta.get("pixel_size_y_m")
@@ -186,7 +213,8 @@ def collect_one(args, name, weights, data_path, root, images, labels, metadata, 
         writer.writerows(image_rows)
     fixed = aggregate(records)
     protocol = {"version": EVALUATOR_VERSION, "imgsz": args.imgsz, "split": args.split,
-                "grid": "square aspect-preserving letterbox, integer rasterized normalized YOLO polygons",
+                "rect": True, "batch": args.batch, "augment": False,
+                "grid": "rectangular predictions translated without resampling to square letterbox; integer rasterized GT polygons",
                 "conf": args.conf, "predict_conf": args.predict_conf, "nms_iou": args.iou,
                 "match_iou": args.match_iou, "max_det": args.max_det, "small_area": args.small_area,
                 "boundary_tolerance": args.boundary_tolerance, "precision": args.precision,
@@ -204,7 +232,7 @@ def collect_one(args, name, weights, data_path, root, images, labels, metadata, 
         "environment": environment(), "code": code_provenance(),
         "data": str(data_path), "data_yaml_sha256": sha256(data_path),
         "dataset_content_sha256": dataset_hash, "metadata_csv_sha256": sha256(project_path(args.metadata_csv)) if args.metadata_csv else None,
-        "evaluation_protocol": protocol, "quality_blend": effective_quality_blend,
+        "evaluation_protocol": protocol, **scoring,
         "native": native_values, "native_speed_ms": native.speed,
         "fixed": fixed, "groups": {key: aggregate(value) for key, value in groups.items()},
         "efficiency": None,
@@ -218,7 +246,7 @@ def collect_one(args, name, weights, data_path, root, images, labels, metadata, 
     if not args.skip_benchmark:
         report["efficiency"] = benchmark(weights, args.imgsz, args.batch, args.device, half,
                                          args.warmup, args.iterations, args.predict_conf, args.iou,
-                                         args.max_det, sample_images, args.quality_blend)
+                                         args.max_det, sample_images, args.quality_blend, args.quality_mode, rect=True)
         write_json(output / "paper_report.json", report)
     print(f"Saved {output / 'paper_report.json'}", flush=True)
 
@@ -258,7 +286,12 @@ def main():
             raise FileNotFoundError(weights)
         models.append((name, weights))
     for name, weights in models:
-        collect_one(args, name, weights, data_path, root, images, labels, metadata, manifest, dataset_hash)
+        modes = QUALITY_MODES if args.quality_mode == "all" else (args.quality_mode,)
+        for mode in modes:
+            selected = copy.copy(args)
+            selected.quality_mode = mode
+            run_name = name + "_q" + mode if args.quality_mode == "all" else name
+            collect_one(selected, run_name, weights, data_path, root, images, labels, metadata, manifest, dataset_hash)
 
 
 if __name__ == "__main__":

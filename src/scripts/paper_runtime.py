@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from project_paths import PROJECT_ROOT
+from quality_scoring import set_quality_scoring
 
 
 EVALUATOR_VERSION = "fieldbcq-paper-v1"
@@ -146,7 +147,7 @@ def attach_training_metadata(model, stage, cli_args, train_args):
 
 
 def benchmark(weights, imgsz=640, batch=1, device="cpu", half=False, warmup=20, iterations=100,
-              conf=0.001, iou=0.70, max_det=710, images=None, quality_blend=None):
+              conf=0.001, iou=0.70, max_det=710, images=None, quality_blend=None, quality_mode=None, rect=True):
     """Measure raw forward and decoded-image prediction separately; no disk I/O in timing."""
     import copy
     import numpy as np
@@ -159,11 +160,7 @@ def benchmark(weights, imgsz=640, batch=1, device="cpu", half=False, warmup=20, 
         raise ValueError("FP16 benchmark requires a CUDA device; use fp32 for CPU.")
     wrapper = YOLO(str(weights))
     network = wrapper.model.to(selected).eval()
-    if quality_blend is not None:
-        head = network.model[-1]
-        if not hasattr(head, "quality_blend"):
-            raise ValueError("--quality-blend is only valid for a quality-head checkpoint.")
-        head.quality_blend = quality_blend
+    scoring = set_quality_scoring(network, quality_mode, quality_blend)
     parameters = sum(p.numel() for p in network.parameters())
     profile_error, gflops = None, None
     profiled = sample = None
@@ -221,7 +218,7 @@ def benchmark(weights, imgsz=640, batch=1, device="cpu", half=False, warmup=20, 
         decoded = [np.zeros((imgsz, imgsz, 3), dtype=np.uint8) for _ in range(batch)]
         image_kind = "blank synthetic images; postprocessing cost is not representative"
     options = dict(source=decoded, imgsz=imgsz, batch=batch, device=str(selected), half=half,
-                   rect=False, conf=conf, iou=iou, max_det=max_det, verbose=False, save=False)
+                   rect=rect, conf=conf, iou=iou, max_det=max_det, verbose=False, save=False)
     wrapper.predict(**options)  # initialize predictor outside timed scope
     pipeline = measure(lambda: wrapper.predict(**options))
     return {
@@ -232,6 +229,6 @@ def benchmark(weights, imgsz=640, batch=1, device="cpu", half=False, warmup=20, 
         "raw_forward": raw, "decoded_image_pipeline": pipeline, "pipeline_inputs": image_kind,
         "raw_scope": "resident tensor -> unfused eval model forward including quality fusion; excludes preprocessing/NMS",
         "pipeline_scope": "decoded BGR images -> preprocessing, model (predictor may fuse layers), NMS, masks, Results; excludes disk I/O and metrics",
-        "conf": conf, "nms_iou": iou, "max_det": max_det, "quality_blend": quality_blend,
+        "conf": conf, "nms_iou": iou, "max_det": max_det, "rect": rect, **scoring,
         "cpu_peak_memory": "not measured; CUDA memory values are null on CPU",
     }

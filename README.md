@@ -217,6 +217,38 @@ C0 disables quality fusion (`quality_blend = 0`); C2 enables it (`quality_blend 
 
 This isolates the contribution of inference scoring. C0 retains the representation learned with quality supervision, so the gain does not measure every effect of the quality branch.
 
+### Four-Way Quality Scoring on Identical Weights
+
+The runtime option `--quality-mode` changes scoring before confidence filtering and NMS:
+
+| Mode | Score | Meaning |
+|---|---|---|
+| `class` | `s` | Class score alone (historical C0) |
+| `region` | `s * qr` | Region quality alone |
+| `boundary` | `s * qb` | Boundary quality alone |
+| `joint` | `s * sqrt(qr * qb)` | Joint quality (historical C2, default for old checkpoints) |
+
+No training or checkpoint rewriting is required. The same candidate's boxes, mask coefficients and prototypes remain unchanged; score filtering and NMS can change the selected instances. This experiment isolates inference scoring, while all four conditions retain the representation learned with both quality targets. The legacy `--quality-blend 0/1` switch remains available and is mutually exclusive with `--quality-mode`.
+
+From the project root, evaluate one full-model checkpoint in all four modes:
+
+```bash
+python src/scripts/collect_paper_metrics.py --weights round1=model/abc/best.pt --quality-mode all --data data/datasets.yaml --split test --device 0 --precision fp32 --imgsz 640 --batch 8 --workers 4 --predict-conf 0.001 --conf 0.25 --iou 0.70 --max-det 710 --skip-benchmark --project results/quality_scoring_round1
+python src/scripts/summarize_paper_runs.py --reports results/quality_scoring_round1 --output results/quality_scoring_round1_summary
+```
+
+The collector uses `rect=True` for native AP and prediction. For contour/structure metrics, rectangular input-grid masks are translated to the square letterbox grid by restoring padding without resizing contours; GT polygons, the two-pixel boundary tolerance and the 1,024-pixel small-parcel cutoff use that square grid. These reports record the new protocol and are kept separate from earlier square-inference reports. Native AP and fixed-threshold metrics come from separate passes and remain separate in the report.
+
+Four directories (`round1_qclass`, `round1_qregion`, `round1_qboundary`, `round1_qjoint`) contain `paper_report.json`, `per_image.csv`, dataset hashes and native AP outputs. Each report records the mode, formula, weight hash, checkpoint seed and evaluation protocol. The summary CSV contains per-mode means and sample standard deviations; summary JSON additionally gives AP-point differences against class/region/boundary modes, paired by identical checkpoint hash. Do not treat repeated evaluation of one weight file as independent training runs. Supply repeated `--weights ROUND=CHECKPOINT` arguments for the available historical rounds; use actual weight paths and retain distinct names. Existing output directories are not overwritten. No four-way experimental results are bundled.
+
+For native AP only, use the compact entry point (one dataset pass per mode):
+
+```bash
+python src/scripts/val_paper.py --weights round1=model/abc/best.pt --quality-mode all --data data/datasets.yaml --split test --device 0 --precision fp32 --imgsz 640 --batch 8
+```
+
+`--quality-mode region` or `boundary` evaluates one mode. `benchmark_paper.py` also accepts the four individual modes and records the selected mode and `rect=True`. A quality intervention requires a `BASMQCSegment` checkpoint; a baseline or A+B checkpoint has no learned two-quality head.
+
 ### Fixed-Threshold Behavior
 
 The supplementary comparison uses archived `baseline_seed0` and `abc_seed02` checkpoints from the third supplementary group at **confidence 0.25**, with same-class, one-to-one mask matching at **IoU ≥ 0.50**. Their complete training pairing has not been reconstructed; this is a descriptive comparison, separate from the identical-weight C0/C2 intervention.
@@ -327,7 +359,7 @@ python src/scripts/train_paper.py --stage bc --seed 0
 
 These commands use the same pretrained initialization, dataset and training defaults as the full-model command. The canonical output names are `rbqs_seed0`, `bds_rbqs_seed0`, and `baps_rbqs_seed0`. Repeat with matched seeds and validation-based checkpoint selection; new configurations have no results until trained and evaluated. `--no-pretrained` trains from random initialization, which is a different experimental setting.
 
-Saved training arguments retain the boundary mode. Native evaluation and supplementary reports identify the three combinations separately, and `summarize_paper_runs.py` keeps quality fusion disabled (`_c0`) and enabled (`_c2`) reports separate for each quality configuration. The `c` training alias means RBQS-only; it is distinct from the historical C0/C2 inference interventions on full-model weights.
+Saved training arguments retain the boundary mode. Native evaluation and supplementary reports identify the three combinations separately, and `summarize_paper_runs.py` keeps scoring modes separate for each quality configuration. Historical reports without `quality_mode` retain the `_c0` and `_c2` labels. The `c` training alias means RBQS-only; it is distinct from the historical C0/C2 inference interventions on full-model weights.
 
 Current training defaults are:
 

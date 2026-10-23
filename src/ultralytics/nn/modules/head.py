@@ -226,7 +226,19 @@ class BASMQCSegment(Segment):
         if self.training:
             return x, mc, p, (boundary_logits, quality_logits)
 
-        quality = quality_logits.sigmoid().prod(1, keepdim=True).sqrt()
+        # Runtime-only scoring intervention; historical checkpoints default to joint.
+        quality_mode = getattr(self, "quality_mode", "joint")
+        probabilities = quality_logits.sigmoid()
+        if quality_mode == "class":
+            quality = torch.ones_like(probabilities[:, :1])
+        elif quality_mode == "region":
+            quality = probabilities[:, :1]
+        elif quality_mode == "boundary":
+            quality = probabilities[:, 1:2]
+        elif quality_mode == "joint":
+            quality = probabilities.prod(1, keepdim=True).sqrt()
+        else:
+            raise ValueError(f"Unsupported quality_mode: {quality_mode}")
         # Old checkpoints do not contain this runtime-only attribute, so keep full MQC as the fallback.
         quality_blend = float(getattr(self, "quality_blend", 1.0))
         quality_factor = (1.0 - quality_blend) + quality_blend * quality

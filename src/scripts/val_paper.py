@@ -1,6 +1,7 @@
 """Single-pass mask evaluation, or a compact summary of existing paper reports."""
 
 import argparse
+import copy
 import csv
 import json
 import logging
@@ -10,6 +11,7 @@ from datetime import datetime
 from contextlib import contextmanager
 from pathlib import Path
 
+from quality_scoring import QUALITY_MODES, set_quality_scoring
 from project_paths import project_path
 from paper_runtime import configuration_of, sha256, write_json
 
@@ -37,7 +39,13 @@ def parse_args():
     parser.add_argument("--project", default="results/validation")
     parser.add_argument("--name", help="New output directory name; existing directories are never overwritten.")
     parser.add_argument("--plots", action="store_true", help="Opt in to evaluation plots; disabled by default.")
+    scoring = parser.add_mutually_exclusive_group()
+    scoring.add_argument("--quality-mode", choices=(*QUALITY_MODES, "all"),
+                         help="Runtime scoring only; all evaluates the same checkpoint four times.")
+    scoring.add_argument("--quality-blend", type=float, choices=(0.0, 1.0), help="Legacy C0/C2 switch.")
     args = parser.parse_args()
+    if args.report and (args.quality_mode is not None or args.quality_blend is not None):
+        parser.error("Quality overrides require --weights; existing reports cannot be rescored")
     if min(args.batch, args.imgsz, args.max_det) < 1 or args.imgsz % 32 or args.workers < 0:
         parser.error("batch/max-det must be positive; imgsz a positive multiple of 32; workers nonnegative")
     if not 0 <= args.conf <= 1 or not 0 < args.iou <= 1:
@@ -113,7 +121,7 @@ def evaluate_one(args, name, weights, output):
     stored = dict((model.ckpt or {}).get("train_args", {}))
     seed = stored.get("seed")
     configuration = configuration_of(model.model)
-    quality_blend = getattr(model.model.model[-1], "quality_blend", None)
+    scoring = set_quality_scoring(model.model, args.quality_mode, args.quality_blend)
     checkpoint_hash = sha256(weights)
     options = dict(data=str(project_path(args.data)), split=args.split, imgsz=args.imgsz,
                    batch=args.batch, workers=args.workers, half=args.precision == "fp16",
@@ -129,7 +137,7 @@ def evaluate_one(args, name, weights, output):
                                      map50=mask.map50, map75=mask.map75, map50_95=mask.map))
     parameter = next(model.model.parameters())
     metadata = dict(model=name, configuration=configuration, seed=seed,
-                    quality_blend=quality_blend,
+                    **scoring,
                     checkpoint=str(weights), checkpoint_sha256=checkpoint_hash,
                     data=options["data"], data_yaml_sha256=sha256(options["data"]),
                     evaluation_options=options,
@@ -152,7 +160,7 @@ def extract_report(path):
     row = metric_row(name, report.get("seed"), mask)
     metadata = {key: report.get(key) for key in ("configuration", "seed", "checkpoint",
                 "checkpoint_sha256", "data", "data_yaml_sha256", "dataset_content_sha256",
-                "evaluation_protocol", "environment")}
+                "evaluation_protocol", "environment", "quality_mode", "quality_blend", "quality_formula")}
     metadata.update(model=name, source_report=str(path))
     return row, metadata
 
@@ -183,10 +191,19 @@ def main():
     output = project_path(args.project) / (args.name or datetime.now().strftime("val_%Y%m%d_%H%M%S_%f"))
     output.mkdir(parents=True, exist_ok=False)
     rows, metadata = [], []
+    if args.quality_mode == "all":
+        models = [(name + "_q" + mode, weights, mode) for name, weights in models for mode in QUALITY_MODES]
+    else:
+        models = [(name, weights, args.quality_mode) for name, weights in models]
     inputs = models if models else args.report
     for index, item in enumerate(inputs, 1):
         print("\n[{}/{}] {}".format(index, len(inputs), item[0] if models else item), flush=True)
-        row, info = evaluate_one(args, *item, output) if models else extract_report(item)
+        if models:
+            selected = copy.copy(args)
+            selected.quality_mode = item[2]
+            row, info = evaluate_one(selected, item[0], item[1], output)
+        else:
+            row, info = extract_report(item)
         rows.append(row)
         metadata.append(info)
         save_results(output, rows, metadata)  # preserve completed models if a later one fails

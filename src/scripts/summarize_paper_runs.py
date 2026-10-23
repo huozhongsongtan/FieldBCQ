@@ -8,6 +8,7 @@ import statistics
 from pathlib import Path
 
 from project_paths import project_path
+from quality_scoring import QUALITY_MODES
 from paper_runtime import write_json
 
 
@@ -30,13 +31,22 @@ def summarize(reports):
         signature = hashlib.sha256(json.dumps(protocol, sort_keys=True).encode()).hexdigest()
         config = report["configuration"]
         if config in {"fieldbcq", "rbqs", "bds_rbqs", "baps_rbqs"}:
-            config += "_c0" if report.get("quality_blend") == 0 else "_c2"
+            mode = report.get("quality_mode")
+            if mode is not None:
+                if mode not in QUALITY_MODES:
+                    raise ValueError(f"Invalid quality_mode in report: {mode}")
+                config += "_q" + mode
+            else:
+                config += "_c0" if report.get("quality_blend") == 0 else "_c2"
         seed = report.get("seed")
         identity = (signature, config, seed)
-        if seed is None:
+        if report.get("quality_mode") is not None:
+            # Historical rounds can share a recorded seed; score interventions pair actual weights.
+            identity = (signature, config, report["checkpoint_sha256"])
+        elif seed is None:
             identity += (report["checkpoint_sha256"],)
         if identity in seen:
-            raise ValueError(f"Duplicate configuration/seed/protocol: {config} seed={seed}")
+            raise ValueError(f"Duplicate configuration/seed/checkpoint/protocol: {config} seed={seed}")
         seen.add(identity)
         groups.setdefault((signature, config), []).append(report)
     summary = []
@@ -62,6 +72,24 @@ def summarize(reports):
                         "unit": "AP points", "paired_seeds": seeds, "n": len(gains),
                         "mean": statistics.mean(gains), "sample_std": statistics.stdev(gains) if len(gains) > 1 else None,
                     }
+        result["paired_gain_over_quality_modes"] = {}
+        current_mode = records[0].get("quality_mode")
+        for reference in ("class", "region", "boundary") if current_mode else ():
+            if reference == current_mode:
+                continue
+            reference_key = records[0]["configuration"] + "_q" + reference
+            reference_rows = {row["checkpoint_sha256"]: row for row in groups.get((signature, reference_key), [])}
+            pairs = [(row, reference_rows[row["checkpoint_sha256"]]) for row in records
+                     if row["checkpoint_sha256"] in reference_rows]
+            if pairs:
+                result["paired_gain_over_quality_modes"][reference] = {
+                    metric: {"unit": "AP points", "n": len(pairs),
+                             "checkpoint_sha256": [row["checkpoint_sha256"] for row, _ in pairs],
+                             "mean": statistics.mean(100 * (row["native"]["mask"][metric] - ref["native"]["mask"][metric])
+                                                     for row, ref in pairs),
+                             "sample_std": statistics.stdev(100 * (row["native"]["mask"][metric] - ref["native"]["mask"][metric])
+                                                            for row, ref in pairs) if len(pairs) > 1 else None}
+                    for metric in ("map50", "map75", "map50_95")}
         summary.append(result)
     return summary
 

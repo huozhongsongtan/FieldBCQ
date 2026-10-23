@@ -2,6 +2,7 @@
 
 import argparse
 from project_paths import project_path
+from quality_scoring import QUALITY_MODES
 from paper_runtime import benchmark, code_provenance, environment, sha256, write_json
 
 
@@ -16,7 +17,9 @@ def main():
     parser.add_argument("--warmup", type=int, default=20)
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--images", nargs="+", help="Representative image paths, decoded before timing")
-    parser.add_argument("--quality-blend", type=float, choices=(0.0, 1.0))
+    scoring = parser.add_mutually_exclusive_group()
+    scoring.add_argument("--quality-blend", type=float, choices=(0.0, 1.0))
+    scoring.add_argument("--quality-mode", choices=QUALITY_MODES)
     args = parser.parse_args()
     if args.imgsz <= 0 or args.imgsz % 32 or min(args.batch, args.iterations) < 1 or args.warmup < 0:
         parser.error("imgsz must be a positive multiple of 32; batch/iterations positive; warmup nonnegative")
@@ -30,7 +33,7 @@ def main():
     report = {"checkpoint": str(weights), "checkpoint_sha256": sha256(weights),
               "environment": environment(), "code": code_provenance(),
               "benchmark": benchmark(weights, args.imgsz, args.batch, args.device, args.precision == "fp16",
-                                     args.warmup, args.iterations, images=images, quality_blend=args.quality_blend)}
+                                     args.warmup, args.iterations, images=images, quality_blend=args.quality_blend, quality_mode=args.quality_mode)}
     write_json(project_path(args.output), report)
     print(f"Saved {project_path(args.output)}")
 
