@@ -117,7 +117,7 @@ def evaluate_one(args, name, weights, output):
     checkpoint_hash = sha256(weights)
     options = dict(data=str(project_path(args.data)), split=args.split, imgsz=args.imgsz,
                    batch=args.batch, workers=args.workers, half=args.precision == "fp16",
-                   conf=args.conf, iou=args.iou, max_det=args.max_det, rect=False,
+                   conf=args.conf, iou=args.iou, max_det=args.max_det, rect=True,
                    augment=False, plots=args.plots, save=False, save_json=False,
                    save_txt=False, verbose=False, project=str(output), name=name, exist_ok=True)
     if args.device is not None:
