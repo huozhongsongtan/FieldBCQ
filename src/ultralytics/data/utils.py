@@ -251,7 +251,7 @@ def find_dataset_yaml(path: Path) -> Path:
     return files[0]
 
 
-def check_det_dataset(dataset, autodownload=True):
+def check_det_dataset(dataset, autodownload=True, check_fonts=True):
     """
     Download, verify, and/or unzip a dataset if not found locally.
 
@@ -262,6 +262,7 @@ def check_det_dataset(dataset, autodownload=True):
     Args:
         dataset (str): Path to the dataset or dataset descriptor (like a YAML file).
         autodownload (bool, optional): Whether to automatically download the dataset if not found. Defaults to True.
+        check_fonts (bool, optional): Check plotting fonts. Disable for evaluation without plots.
 
     Returns:
         (dict): Parsed dataset information and paths.
@@ -339,7 +340,8 @@ def check_det_dataset(dataset, autodownload=True):
             dt = f"({round(time.time() - t, 1)}s)"
             s = f"success ✅ {dt}, saved to {colorstr('bold', DATASETS_DIR)}" if r in {0, None} else f"failure {dt} ❌"
             LOGGER.info(f"Dataset download {s}\n")
-    check_font("Arial.ttf" if is_ascii(data["names"]) else "Arial.Unicode.ttf")  # download fonts
+    if check_fonts:
+        check_font("Arial.ttf" if is_ascii(data["names"]) else "Arial.Unicode.ttf")  # download fonts
 
     return data  # dictionary
 

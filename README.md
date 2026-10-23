@@ -329,19 +329,25 @@ These defaults do not establish the complete settings of the historical rounds. 
 
 ### Test Evaluation
 
-After preparing AgriParcel-MS and the environment, evaluate all four included checkpoints on the fixed test set with [val_paper_all_models.py](./src/scripts/val_paper_all_models.py):
+Use [val_paper.py](./src/scripts/val_paper.py) for routine evaluation. It makes one native validation pass per checkpoint and writes a single `paper_metrics.csv` containing mask P, R, F1, AP50, AP75 and AP50–95 (all on a 0–1 scale). Plots, secondary prediction passes, CPU contour/area analysis and efficiency benchmarks are disabled by default. Validation without plots does not check or download plotting fonts.
 
 ```powershell
-python src/scripts/val_paper_all_models.py --data data/datasets.yaml --split test --imgsz 640 --batch 8 --project results/runs
+python src/scripts/val_paper.py --weights baseline_seed0=results/train/baseline_seed0/weights/best.pt --data data/datasets.yaml --split test --device 0 --imgsz 640 --batch 8
 ```
 
-The evaluation names are `baseline`, `pcsc`, `baps_pcsc`, and `fieldbcq`. The default output cap is 710 instances per image. The script writes per-model `paper_metrics.json` files, a combined `paper_metrics_all.json`, and evaluation plots. Checkpoint and dataset references in the combined summary are relative to the project root.
+Repeat `--weights NAME=CHECKPOINT` to evaluate multiple models into the same CSV. Results go into a new timestamped directory under `results/validation/`; `--name` chooses a new directory explicitly. A small `validation_config.json` retains seeds read from checkpoints, checkpoint hashes, evaluator version, runtime versions and evaluation settings. Existing result directories are never overwritten. Use `--plots` only when plots are needed. The default is FP32, square letterbox input (`rect=False`), confidence floor 0.001, NMS IoU 0.70 and at most 710 instances per image, matching the native-AP settings of the full collector.
 
-For a single checkpoint, use [val_paper.py](./src/scripts/val_paper.py) with `--weights` pointing to a checkpoint from the configuration table and `--name` set to the configuration name. New evaluations of individual checkpoints do not recreate the paper's three-run summaries.
+Already have a full report? Extract its main-table values without loading a model or rerunning validation:
+
+```powershell
+python src/scripts/val_paper.py --report results/paper_round2/round2_exp/paper_report.json
+```
+
+Repeat `--report` to collect multiple reports. F1 is the harmonic mean of native mask P/R at the framework operating point; it is not the full collector's fixed-confidence F1. Do not mix the two definitions. New evaluations of individual checkpoints do not recreate the paper's three-run summaries. The older `val_paper_all_models.py` remains available for the four archived checkpoints.
 
 For country- or nominal-resolution evaluation, prepare a dataset YAML referencing the verified test image list for each group and pass it through `--data`. Use the same group membership for every configuration.
 
-These commands run native validation. They do not generate the manuscript's supplementary fixed-threshold boundary, merge, oversegmentation, small-parcel, or ECE statistics. The supplementary prediction protocol used a confidence floor of 0.001, NMS IoU 0.70, and an output cap of 710, followed by analysis at confidence 0.25. Reproducing that series requires its evaluator definitions and checkpoint identities.
+For supplementary boundary, merge, oversegmentation, small-parcel, calibration and agricultural area/count metrics, run `collect_paper_metrics.py` when those measurements are needed; it performs additional inference and CPU analysis. Use `benchmark_paper.py` separately for efficiency measurements. These are supplementary workflows rather than the routine main-table validation command.
 
 Scripts store writable Ultralytics settings under `./results/runtime_config` unless `YOLO_CONFIG_DIR` is already defined.
 

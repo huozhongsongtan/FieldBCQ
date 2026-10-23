@@ -15,6 +15,7 @@ dist/
 results/train/
 results/runs/
 results/source_eval/
+results/validation/
 
 # Local credentials and configuration
 .env
