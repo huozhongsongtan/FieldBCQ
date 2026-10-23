@@ -16,6 +16,16 @@ BAPS-only 与 BDS+BAPS 复用 `Segment_BAS` 网络结构，区别由 `boundary_m
 
 ## 2. 训练与基本验证
 
+正式训练前可以先对五组做一次 smoke（默认使用论文 x 规模、随机初始化、FP32）：
+
+```bash
+python src/scripts/smoke_paper.py --data data/datasets.yaml --device 0 --epochs 1 --batch 2 --imgsz 320 --train-images 16 --val-images 8
+```
+
+脚本按 seed 固定抽取少量 train/val 图像，为各组依次运行训练、原生验证、检查点保存、配置重载检查及预测，最后汇总 `SMOKE RESULT: 5/5 passed`。选取样本中需至少包含一个非空标注；否则增加样本数或更换 seed。输入数据、标签和原始 YAML 不会复制或改写，结果及临时子集配置保存到带时间戳的 `results/smoke/` 子目录。每组检查通过不要求 AP 达到某个数值；这是流程检查，不能填入论文结果。
+
+默认关闭 AMP 和绘图，并用 Matplotlib 自带字体避免字体下载阻塞。增加 `--amp` 可进一步检查混合精度，`--weights PATH` 可检查指定本地预训练权重的加载。`--scale n` 只检查较小网络的流程，不能替代默认 x 模型检查。只跑部分组可使用 `--stages baps fieldbcq`。独立的模型图、正/空标注梯度检查仍可运行 `python src/scripts/check_paper_models.py`。
+
 ```powershell
 # 先激活原有实验使用的 Python / PyTorch 环境
 python -m pip install -e ./src
