@@ -12,7 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from project_paths import project_path
+from project_paths import project_path, relative_or_absolute
 from paper_runtime import EVALUATOR_VERSION, benchmark, code_provenance, configuration_of, environment, sha256, write_json
 
 
@@ -175,7 +175,7 @@ def collect_one(args, name, weights, data_path, root, images, labels, metadata, 
                 value = meta.get(column)
                 if value:
                     groups.setdefault(f"{column}={value}", []).append(record)
-            row = {"image": str(path.relative_to(root)) if path.is_relative_to(root) else str(path),
+            row = {"image": relative_or_absolute(path, root),
                    **{key: meta.get(key) for key in ("source", "country", "resolution_m")},
                    **{key: value for key, value in record.items() if key != "calibration_bins"}}
             image_rows.append(row)
@@ -241,7 +241,7 @@ def main():
         label = labels[image]
         if not label.is_file():
             raise FileNotFoundError(f"Missing label {label}; negative images require an explicit empty label file")
-        manifest.append({"image": str(image.relative_to(root)) if image.is_relative_to(root) else str(image),
+        manifest.append({"image": relative_or_absolute(image, root),
                          "image_sha256": sha256(image), "label_sha256": sha256(label)})
     dataset_hash = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
     names = set()

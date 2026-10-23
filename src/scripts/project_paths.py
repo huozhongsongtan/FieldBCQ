@@ -20,4 +20,13 @@ def relative_path(value, base=PROJECT_ROOT):
     return Path(os.path.relpath(value, base)).as_posix()
 
 
+def relative_or_absolute(value, base):
+    """Keep paths inside base relative, without requiring Python 3.9 pathlib APIs."""
+    path = Path(value)
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        return str(path)
+
+
 os.environ.setdefault("YOLO_CONFIG_DIR", str(project_path("results/runtime_config")))

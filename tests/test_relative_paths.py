@@ -1,5 +1,6 @@
 """Check path portability without loading models or running inference."""
 
+import argparse
 import ast
 import glob
 import importlib
@@ -36,6 +37,21 @@ class RelativePathTests(unittest.TestCase):
 
     def temporary_directory(self):
         return tempfile.TemporaryDirectory(prefix="relative_paths_", dir=ROOT)
+
+    def test_dataset_references_without_python39_path_methods(self):
+        base = ROOT / "数据集"
+        inside = base / "images" / "二轮.png"
+        outside = ROOT / "数据集_backup" / "二轮.png"
+        with patch.object(Path, "is_relative_to", create=True, side_effect=AssertionError("Python 3.9 API used")):
+            self.assertEqual(self.paths.relative_or_absolute(inside, base), str(Path("images") / "二轮.png"))
+            self.assertEqual(self.paths.relative_or_absolute(outside, base), str(outside))
+            self.assertEqual(self.paths.relative_or_absolute(base, base), ".")
+
+    def test_amp_flags_without_python39_argparse_actions(self):
+        with patch.object(argparse, "BooleanOptionalAction", None, create=True):
+            for flags, expected in (([], True), (["--amp"], True), (["--no-amp"], False)):
+                with self.subTest(flags=flags), patch.object(sys, "argv", ["train_paper.py"] + flags):
+                    self.assertIs(self.train.parse_args().amp, expected)
 
     def test_paths_follow_relocated_script_instead_of_working_directory(self):
         with self.temporary_directory() as temporary:
