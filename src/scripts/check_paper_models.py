@@ -1,10 +1,11 @@
-"""Check all five configurations; optionally load the four archived checkpoints."""
+"""Check all eight configurations; optionally load the four archived checkpoints."""
 
 import argparse
 import gc
 
 from project_paths import project_path
 from train_paper import STAGES
+from paper_runtime import configuration_of
 
 import torch
 from ultralytics import YOLO
@@ -17,6 +18,9 @@ EXPECTED = {
     "pcsc": ("BoundaryDiceSegment", "v8BoundaryDiceSegmentationLoss", "a"),
     "baps_pcsc": ("Segment_BAS", "v8BASSegmentationLoss", "ab"),
     "baps": ("Segment_BAS", "v8BAPSSegmentationLoss", None),
+    "rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", None),
+    "bds_rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", None),
+    "baps_rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", None),
     "fieldbcq": ("BASMQCSegment", "v8BASMQCSegmentationLoss", "abc"),
 }
 
@@ -42,6 +46,7 @@ def check_configuration(name):
     expected_head, expected_loss, _ = EXPECTED[name]
     assert type(head).__name__ == expected_head
     assert type(model.init_criterion()).__name__ == expected_loss
+    assert configuration_of(model) == name
     assert model.stride.tolist() == [8, 16, 32]
     model.eval()
     with torch.no_grad():
@@ -60,7 +65,10 @@ def check_configuration(name):
         if hasattr(head, "boundary_head"):
             gradient = head.boundary_head[-1].weight.grad
             assert gradient is not None and torch.isfinite(gradient).all()
-            assert empty or gradient.abs().sum() > 0
+            if stage["overrides"].get("boundary_mode") == "none":
+                assert torch.count_nonzero(gradient) == 0
+            else:
+                assert empty or gradient.abs().sum() > 0
         if hasattr(head, "cv5"):
             gradient = head.cv5[0][-1].weight.grad
             assert gradient is not None and torch.isfinite(gradient).all()
@@ -90,7 +98,7 @@ def main():
             check_checkpoint(name)
             gc.collect()
         print(f"{name}: configuration, inference, positive/empty loss and gradients passed; parameters={parameters:,}")
-    print("All five configurations passed (BAPS-only has no bundled trained checkpoint).")
+    print("All eight configurations passed (B, C, A+C and B+C require new training).")
 
 
 if __name__ == "__main__":

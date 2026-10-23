@@ -29,7 +29,7 @@ def summarize(reports):
                     "evaluation": report["evaluation_protocol"], "code": report["code"]["source_sha256"]}
         signature = hashlib.sha256(json.dumps(protocol, sort_keys=True).encode()).hexdigest()
         config = report["configuration"]
-        if config == "fieldbcq":
+        if config in {"fieldbcq", "rbqs", "bds_rbqs", "baps_rbqs"}:
             config += "_c0" if report.get("quality_blend") == 0 else "_c2"
         seed = report.get("seed")
         identity = (signature, config, seed)

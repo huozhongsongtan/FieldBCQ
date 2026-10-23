@@ -94,6 +94,23 @@ class MetricTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             summarize([report("baps", 1, 0.4), report("baps", 1, 0.5)])
 
+    def test_summary_separates_all_quality_configurations_and_fusion_switches(self):
+        reports = []
+        for config in ("rbqs", "bds_rbqs", "baps_rbqs", "fieldbcq"):
+            for blend in (0, 1):
+                reports.append({
+                    "configuration": config, "seed": 0, "quality_blend": blend,
+                    "checkpoint_sha256": config, "dataset_content_sha256": "same",
+                    "evaluation_protocol": {"version": "v1"}, "code": {"source_sha256": "code"},
+                    "native": {"mask": {"map50": 0.6, "map75": 0.4, "map50_95": 0.4}},
+                    "fixed": {"f1": 0.6},
+                })
+        result = summarize(reports)
+        self.assertEqual({row["configuration"] for row in result}, {
+            config + suffix for config in ("rbqs", "bds_rbqs", "baps_rbqs", "fieldbcq")
+            for suffix in ("_c0", "_c2")
+        })
+
 
 if __name__ == "__main__":
     unittest.main()

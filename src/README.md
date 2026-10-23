@@ -1,8 +1,11 @@
 # FieldBCQ Python Package
 
 FieldBCQ is a focused Ultralytics fork for farmland parcel instance segmentation
-with YOLO11x-seg. It provides four public configurations: Baseline, PCSC,
-BAPS + PCSC, and FieldBCQ.
+with YOLO11x-seg. It provides all eight combinations of boundary Dice (BDS),
+boundary pixel BCE (BAPS), and region-boundary quality scoring (RBQS): Baseline,
+BDS, BAPS, BDS+BAPS, RBQS, BDS+RBQS, BAPS+RBQS, and FieldBCQ.
+Four historical checkpoints are bundled; BAPS-only, RBQS-only, BDS+RBQS,
+and BAPS+RBQS require new training.
 
 Install the source in a dedicated Python 3.10+ environment:
 
@@ -16,7 +19,7 @@ installing this package. The package uses the distribution and import name
 No timm, einops, or custom CUDA extensions are needed for the public models.
 
 See the [FieldBCQ repository](https://github.com/huozhongsongtan/FieldBCQ)
-for dataset preparation, the four model definitions and checkpoints, training
+for dataset preparation, model definitions and archived checkpoints, training
 and evaluation commands, reported results, and verification instructions.
 
 The base framework is derived from [Ultralytics](https://github.com/ultralytics/ultralytics).

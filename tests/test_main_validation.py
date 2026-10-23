@@ -71,8 +71,9 @@ class MainValidationTests(unittest.TestCase):
             self.assertAlmostEqual(row["F1"], 0.4)
             self.assertEqual(len(info["checkpoint_sha256"]), 64)
             options = model.val.call_args.kwargs
-            for flag in ("plots", "save", "save_json", "save_txt", "rect", "augment", "half"):
+            for flag in ("plots", "save", "save_json", "save_txt", "augment", "half"):
                 self.assertFalse(options[flag])
+            self.assertTrue(options["rect"])
             self.assertEqual(options["conf"], 0.001)
             self.assertEqual(options["iou"], 0.7)
             self.assertEqual(options["max_det"], 710)

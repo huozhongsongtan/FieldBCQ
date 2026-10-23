@@ -8,7 +8,7 @@ On the fixed **AgriParcel-MS** test set of **2,000 images and 21,190 patch-level
 
 This repository provides the implementation, training and native evaluation entry points, four archived checkpoints, and dataset/result summaries. The underlying imagery and annotations must be obtained from the original sources.
 
-The five-way ablation includes an independently trainable **BAPS-only** configuration (`--stage baps`). BAPS-only requires a new training run; no trained BAPS-only checkpoint or result is bundled.
+The eight-way ablation supports all combinations of BDS (A), BAPS (B), and RBQS (C). **B-only, C-only, A+C, and B+C require new training runs**; no trained checkpoints or experimental results for those configurations are bundled.
 
 ## Method
 
@@ -53,11 +53,16 @@ The contribution is the placement and integration of these objectives within a s
 | **A: BDS** | Base + BDS | `--stage pcsc` | [Boundary Dice model](./src/ultralytics/cfg/models/11/yolo11x-seg-boundary-dice.yaml) | [model/a/best.pt](./model/a/best.pt) |
 | **B: BAPS-only** | Base + boundary pixel BCE, without boundary Dice | `--stage baps` | Same joint boundary model, `boundary_mode=bce` | Requires training |
 | **A+B: BDS + BAPS** | Base + BDS + BAPS | `--stage baps_pcsc` | [Joint boundary model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas.yaml) | [model/ab/best.pt](./model/ab/best.pt) |
+| **C: RBQS-only** | Base + region and boundary quality learning and score fusion | `--stage rbqs` (alias `c`) | Complete model, `boundary=0`, `boundary_mode=none` | Requires training |
+| **A+C: BDS + RBQS** | Base + boundary Dice + RBQS; no boundary pixel BCE | `--stage bds_rbqs` (alias `ac`) | Complete model, `boundary_mode=dice` | Requires training |
+| **B+C: BAPS + RBQS** | Base + boundary pixel BCE + RBQS; no boundary Dice | `--stage baps_rbqs` (alias `bc`) | Complete model, `boundary_mode=bce` | Requires training |
 | **FieldBCQ** | Base + BDS + BAPS + RBQS | `--stage fieldbcq` | [Complete model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml) | [model/abc/best.pt](./model/abc/best.pt) |
 
 Legacy CLI/output identifiers `pcsc` and `baps_pcsc` correspond to BDS and the joint boundary configuration. Historical names PCSC and RBQC correspond to BDS and RBQS. The summary CSV calls A+B `BAPS + BDS`; both names denote the same two losses. Existing model definitions, checkpoint folders, and Python class paths are retained for compatibility.
 
 One checkpoint is included for each of the four archived configurations. Their identities have not been matched to all three historical rounds, so evaluating these files does not recreate the manuscript's repeated-run summary. The repository does not include all 12 historical main-experiment checkpoints, a BAPS-only checkpoint, or reference-model checkpoints.
+
+All four quality configurations share `BASMQCSegment` and the same two-target quality objective and inference scoring. `boundary_mode` selects only the auxiliary shared-prototype boundary objective: `none`, `dice`, `bce`, or `dice_bce`. C-only retains the boundary branch in the common model graph, but skips its target/loss computation and gives it zero loss gradients; it does not remove boundary-F1 from the quality targets. The boundary branch is skipped at inference for every quality configuration. Missing `boundary_mode` in historical full-model checkpoints defaults to `dice_bce`.
 
 ## AgriParcel-MS Dataset
 
@@ -312,7 +317,17 @@ To train the complete FieldBCQ configuration:
 python src/scripts/train_paper.py --stage fieldbcq --data data/datasets.yaml --weights model/pretrained/yolo11x-seg.pt --epochs 80 --batch 8 --imgsz 640 --seed 0 --project results/train --name fieldbcq_seed0
 ```
 
-Select `--stage baseline`, `--stage pcsc`, or `--stage baps_pcsc` for the corresponding comparison, and use a matching run name. `--no-pretrained` trains from random initialization, which is a different experimental setting.
+Select the stage in the configuration table for each comparison. To train the three additional quality combinations with seed 0:
+
+```powershell
+python src/scripts/train_paper.py --stage c --seed 0
+python src/scripts/train_paper.py --stage ac --seed 0
+python src/scripts/train_paper.py --stage bc --seed 0
+```
+
+These commands use the same pretrained initialization, dataset and training defaults as the full-model command. The canonical output names are `rbqs_seed0`, `bds_rbqs_seed0`, and `baps_rbqs_seed0`. Repeat with matched seeds and validation-based checkpoint selection; new configurations have no results until trained and evaluated. `--no-pretrained` trains from random initialization, which is a different experimental setting.
+
+Saved training arguments retain the boundary mode. Native evaluation and supplementary reports identify the three combinations separately, and `summarize_paper_runs.py` keeps quality fusion disabled (`_c0`) and enabled (`_c2`) reports separate for each quality configuration. The `c` training alias means RBQS-only; it is distinct from the historical C0/C2 inference interventions on full-model weights.
 
 Current training defaults are:
 
@@ -335,7 +350,7 @@ Use [val_paper.py](./src/scripts/val_paper.py) for routine evaluation. It makes 
 python src/scripts/val_paper.py --weights baseline_seed0=results/train/baseline_seed0/weights/best.pt --data data/datasets.yaml --split test --device 0 --imgsz 640 --batch 8
 ```
 
-Repeat `--weights NAME=CHECKPOINT` to evaluate multiple models into the same CSV. Results go into a new timestamped directory under `results/validation/`; `--name` chooses a new directory explicitly. A small `validation_config.json` retains seeds read from checkpoints, checkpoint hashes, evaluator version, runtime versions and evaluation settings. Existing result directories are never overwritten. Use `--plots` only when plots are needed. The default is FP32, square letterbox input (`rect=False`), confidence floor 0.001, NMS IoU 0.70 and at most 710 instances per image, matching the native-AP settings of the full collector.
+Repeat `--weights NAME=CHECKPOINT` to evaluate multiple models into the same CSV. Results go into a new timestamped directory under `results/validation/`; `--name` chooses a new directory explicitly. A small `validation_config.json` retains seeds read from checkpoints, checkpoint hashes, evaluator version, runtime versions and evaluation settings. Existing result directories are never overwritten. Use `--plots` only when plots are needed. The default is FP32, rectangular batching with letterbox padding (`rect=True`), confidence floor 0.001, NMS IoU 0.70 and at most 710 instances per image.
 
 Already have a full report? Extract its main-table values without loading a model or rerunning validation:
 
@@ -384,7 +399,7 @@ FieldBCQ/
     `-- dataset_split.csv
 ```
 
-Only `baseline`, `pcsc`, `baps_pcsc`, and `fieldbcq` are accepted by the training script. Archived checkpoint folders `a`, `ab`, and `abc`, and the original Python class paths, are retained so existing weights continue to load. Upstream framework utilities remain available to support training, validation, prediction, and checkpoint loading; unrelated experimental backbones and native extensions are excluded.
+The training script accepts `baseline`, `pcsc`, `baps`, `baps_pcsc`, `rbqs`, `bds_rbqs`, `baps_rbqs`, and `fieldbcq`, plus the documented aliases. Archived checkpoint folders `a`, `ab`, and `abc`, and the original Python class paths, are retained so existing weights continue to load. Upstream framework utilities remain available to support training, validation, prediction, and checkpoint loading; unrelated experimental backbones and native extensions are excluded.
 
 Experiment output directories such as `./results/train` and `./results/runs` are created when training or evaluation is run. Generated outputs and temporary runtime settings are ignored by Git.
 

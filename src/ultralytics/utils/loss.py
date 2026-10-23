@@ -586,11 +586,14 @@ class v8BoundaryDiceSegmentationLoss(v8BASSegmentationLoss):
 
 
 class v8BASMQCSegmentationLoss(v8SegmentationLoss):
-    """BAPS + PCSC boundary supervision and RBQC quality calibration."""
+    """RBQS with optional Dice, BCE, or joint shared-prototype boundary supervision."""
 
     def __init__(self, model):
         super().__init__(model)
         self.boundary_gain = float(getattr(model.args, "boundary", 0.2))
+        self.boundary_mode = getattr(model.args, "boundary_mode", "dice_bce")
+        if self.boundary_mode not in {"none", "dice", "bce", "dice_bce"}:
+            raise ValueError(f"Unsupported BAS-MQC boundary_mode: {self.boundary_mode}")
         self.quality_gain = float(model.args.btq_quality)
         self.boundary_width = max(1, int(model.args.btq_boundary_width))
         self.last_bas_mqc_losses = {}
@@ -634,9 +637,15 @@ class v8BASMQCSegmentationLoss(v8SegmentationLoss):
         recall = (target_boundary & pred_band).sum((1, 2)).float() / target_boundary.sum((1, 2)).clamp_min(1)
         return ((2.0 * precision * recall + 1e-6) / (precision + recall + 1e-6)).detach()
 
-    @staticmethod
-    def _boundary_aux_loss(logits, target):
-        """Return the A+B boundary objective used by the complete method."""
+    def _boundary_aux_loss(self, logits, target):
+        """Select boundary supervision independently of the quality objective."""
+        mode = getattr(self, "boundary_mode", "dice_bce")  # historical serialized criteria
+        if mode == "none":
+            return logits.sum() * 0.0
+        if mode == "dice":
+            return v8BoundaryDiceSegmentationLoss._boundary_aux_loss(logits, target)
+        if mode == "bce":
+            return v8BAPSSegmentationLoss._boundary_aux_loss(logits, target)
         return v8BASSegmentationLoss._boundary_aux_loss(logits, target)
 
     def _quality_aux_loss(
@@ -702,17 +711,21 @@ class v8BASMQCSegmentationLoss(v8SegmentationLoss):
         imgsz,
         overlap,
     ):
-        """Return the combined BAPS, PCSC, and RBQC auxiliary losses."""
+        """Return the selected boundary objective and the unchanged RBQS loss."""
         if not isinstance(auxiliary_outputs, (tuple, list)) or len(auxiliary_outputs) != 2:
             raise ValueError("BAS-MQC head must return (boundary_logits, quality_logits)")
         boundary_logits, quality_logits = auxiliary_outputs
         if boundary_logits.shape[1] != 1:
             raise ValueError(f"BAS boundary head must produce 1 channel, received {boundary_logits.shape[1]}")
 
-        boundary_target = v8BASSegmentationLoss._boundary_target(
-            masks, batch_idx, proto.shape[0], proto.shape[-2:], overlap
-        )
-        boundary_loss = self._boundary_aux_loss(boundary_logits, boundary_target)
+        if getattr(self, "boundary_mode", "dice_bce") == "none" or self.boundary_gain == 0:
+            # Keep the branch connected with zero gradients for DDP compatibility.
+            boundary_loss = boundary_logits.sum() * 0.0
+        else:
+            boundary_target = v8BASSegmentationLoss._boundary_target(
+                masks, batch_idx, proto.shape[0], proto.shape[-2:], overlap
+            )
+            boundary_loss = self._boundary_aux_loss(boundary_logits, boundary_target)
         quality_loss = self._quality_aux_loss(
             quality_logits,
             fg_mask,

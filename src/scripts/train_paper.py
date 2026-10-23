@@ -1,4 +1,4 @@
-"""Train FieldBCQ and its boundary-supervision ablations."""
+"""Train all eight combinations of BDS, BAPS, and RBQS."""
 
 import argparse
 import warnings
@@ -29,18 +29,52 @@ STAGES = {
         "name": "baps",
         "overrides": {"boundary": 0.20, "boundary_mode": "bce"},
     },
+    "rbqs": {
+        "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml",
+        "name": "rbqs",
+        "overrides": {
+            "boundary": 0.0,
+            "boundary_mode": "none",
+            "btq_quality": 0.25,
+            "btq_boundary_width": 2,
+        },
+    },
+    "bds_rbqs": {
+        "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml",
+        "name": "bds_rbqs",
+        "overrides": {
+            "boundary": 0.20,
+            "boundary_mode": "dice",
+            "btq_quality": 0.25,
+            "btq_boundary_width": 2,
+        },
+    },
+    "baps_rbqs": {
+        "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml",
+        "name": "baps_rbqs",
+        "overrides": {
+            "boundary": 0.20,
+            "boundary_mode": "bce",
+            "btq_quality": 0.25,
+            "btq_boundary_width": 2,
+        },
+    },
     "fieldbcq": {
         "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml",
         "name": "fieldbcq",
         "overrides": {
             "boundary": 0.20,
+            "boundary_mode": "dice_bce",
             "btq_quality": 0.25,
             "btq_boundary_width": 2,
         },
     },
 }
 
-STAGE_ALIASES = {"bds": "pcsc", "bds_baps": "baps_pcsc", "baps_only": "baps"}
+STAGE_ALIASES = {
+    "bds": "pcsc", "bds_baps": "baps_pcsc", "baps_only": "baps",
+    "c": "rbqs", "ac": "bds_rbqs", "bc": "baps_rbqs",
+}
 
 
 def parse_args():

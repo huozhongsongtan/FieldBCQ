@@ -87,7 +87,12 @@ def configuration_of(model):
     args = getattr(model, "args", {})
     mode = args.get("boundary_mode", "dice_bce") if isinstance(args, dict) else getattr(args, "boundary_mode", "dice_bce")
     if name == "BASMQCSegment":
-        return "fieldbcq"
+        if mode not in {"none", "dice", "bce", "dice_bce"}:
+            raise ValueError(f"Unsupported BAS-MQC boundary_mode: {mode}")
+        gain = args.get("boundary", 0.2) if isinstance(args, dict) else getattr(args, "boundary", 0.2)
+        if mode == "none" or float(gain) == 0:
+            return "rbqs"
+        return {"dice": "bds_rbqs", "bce": "baps_rbqs", "dice_bce": "fieldbcq"}[mode]
     if name == "BASSegment":
         return "baps"
     if name == "Segment_BAS":
