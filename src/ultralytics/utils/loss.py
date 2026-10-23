@@ -555,6 +555,16 @@ class v8BASSegmentationLoss(v8SegmentationLoss):
         return self.boundary_gain * self._boundary_aux_loss(boundary_logits, target)
 
 
+class v8BAPSSegmentationLoss(v8BASSegmentationLoss):
+    """BAPS-only: pixel BCE on the shared boundary head, without Dice or quality loss."""
+
+    @staticmethod
+    def _boundary_aux_loss(logits, target):
+        if tuple(logits.shape[-2:]) != tuple(target.shape[-2:]):
+            logits = F.interpolate(logits, size=target.shape[-2:], mode="bilinear", align_corners=False)
+        return F.binary_cross_entropy_with_logits(logits, target)
+
+
 class v8BoundaryDiceSegmentationLoss(v8BASSegmentationLoss):
     """PCSC boundary overlap supervision."""
 

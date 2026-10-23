@@ -46,13 +46,17 @@ def main():
         "box": {
             "precision": float(results.box.mp),
             "recall": float(results.box.mr),
+            "f1": float(2 * results.box.mp * results.box.mr / (results.box.mp + results.box.mr)) if results.box.mp + results.box.mr else 0.0,
             "map50": float(results.box.map50),
+            "map75": float(results.box.map75),
             "map50_95": float(results.box.map),
         },
         "mask": {
             "precision": float(results.seg.mp),
             "recall": float(results.seg.mr),
+            "f1": float(2 * results.seg.mp * results.seg.mr / (results.seg.mp + results.seg.mr)) if results.seg.mp + results.seg.mr else 0.0,
             "map50": float(results.seg.map50),
+            "map75": float(results.seg.map75),
             "map50_95": float(results.seg.map),
         },
     }

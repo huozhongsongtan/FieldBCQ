@@ -1,4 +1,4 @@
-"""Check the four public configurations and optional archived checkpoints on CPU."""
+"""Check all five configurations; optionally load the four archived checkpoints."""
 
 import argparse
 import gc
@@ -16,6 +16,7 @@ EXPECTED = {
     "baseline": ("Segment", "v8SegmentationLoss", "baseline"),
     "pcsc": ("BoundaryDiceSegment", "v8BoundaryDiceSegmentationLoss", "a"),
     "baps_pcsc": ("Segment_BAS", "v8BASSegmentationLoss", "ab"),
+    "baps": ("Segment_BAS", "v8BAPSSegmentationLoss", None),
     "fieldbcq": ("BASMQCSegment", "v8BASMQCSegmentationLoss", "abc"),
 }
 
@@ -85,11 +86,11 @@ def main():
     for name in STAGES:
         parameters = check_configuration(name)
         gc.collect()
-        if args.checkpoints:
+        if args.checkpoints and EXPECTED[name][2] is not None:
             check_checkpoint(name)
             gc.collect()
         print(f"{name}: configuration, inference, positive/empty loss and gradients passed; parameters={parameters:,}")
-    print("All four public configurations passed.")
+    print("All five configurations passed (BAPS-only has no bundled trained checkpoint).")
 
 
 if __name__ == "__main__":

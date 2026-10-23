@@ -70,6 +70,7 @@ from ultralytics.utils.loss import (
     v8ClassificationLoss,
     v8BoundaryDiceSegmentationLoss,
     v8BASSegmentationLoss,
+    v8BAPSSegmentationLoss,
     v8BASMQCSegmentationLoss,
     v8DetectionLoss,
     v8OBBLoss,
@@ -438,6 +439,11 @@ class SegmentationModel(DetectionModel):
         if isinstance(head, BASMQCSegment):
             return v8BASMQCSegmentationLoss(self)
         if isinstance(head, Segment_BAS):
+            mode = self.args.get("boundary_mode", "dice_bce") if isinstance(self.args, dict) else getattr(self.args, "boundary_mode", "dice_bce")
+            if mode == "bce":
+                return v8BAPSSegmentationLoss(self)
+            if mode != "dice_bce":
+                raise ValueError(f"Unsupported boundary_mode: {mode}")
             return v8BASSegmentationLoss(self)
         if isinstance(head, BoundaryDiceSegment):
             return v8BoundaryDiceSegmentationLoss(self)

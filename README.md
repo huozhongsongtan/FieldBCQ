@@ -8,6 +8,8 @@ On the fixed **AgriParcel-MS** test set of **2,000 images and 21,190 patch-level
 
 This repository provides the implementation, training and native evaluation entry points, four archived checkpoints, and dataset/result summaries. The underlying imagery and annotations must be obtained from the original sources.
 
+The five-way ablation now includes an independently trainable **BAPS-only** configuration (`--stage baps`). See [论文实验补充说明](./PAPER_EXPERIMENTS.md) for training, validation, paper metrics, efficiency measurements and multi-seed summaries. BAPS-only requires a new training run; no trained BAPS-only checkpoint or result is bundled.
+
 ## Method
 
 ### Shared Prototype Boundary Supervision and Candidate Quality Scoring
@@ -41,7 +43,7 @@ fused_score = class_score * sqrt(region_quality * boundary_quality)
 
 Fusion can change ranking, threshold survival, and NMS outcomes. For fixed weights and a fixed candidate, it leaves the prototypes, coefficients, and reconstructed mask pixels unchanged. Quality-head training can still affect the shared feature extractor.
 
-The contribution is the placement and integration of these objectives within a shared-prototype parcel segmentation pipeline. Boundary learning, Dice/BCE objectives, and learned mask scoring have established foundations: [Boundary-preserving Mask R-CNN](https://doi.org/10.1007/978-3-030-58568-6_39), [V-Net](https://arxiv.org/abs/1606.04797), and [Mask Scoring R-CNN](https://arxiv.org/abs/1903.00241). The current ablation does not include BAPS alone or separately trained region-only and boundary-only quality heads.
+The contribution is the placement and integration of these objectives within a shared-prototype parcel segmentation pipeline. Boundary learning, Dice/BCE objectives, and learned mask scoring have established foundations: [Boundary-preserving Mask R-CNN](https://doi.org/10.1007/978-3-030-58568-6_39), [V-Net](https://arxiv.org/abs/1606.04797), and [Mask Scoring R-CNN](https://arxiv.org/abs/1903.00241). BAPS-only is available for new experiments. The archived results do not include that experiment or separately trained region-only and boundary-only quality heads.
 
 ### Configurations and Checkpoints
 
@@ -49,12 +51,13 @@ The contribution is the placement and integration of these objectives within a s
 |---|---|---|---|---|
 | **Baseline** | Base detection and mask losses | `--stage baseline` | [YOLO11x-seg](./src/ultralytics/cfg/models/11/yolo11x-seg.yaml) | [model/baseline/best.pt](./model/baseline/best.pt) |
 | **A: BDS** | Base + BDS | `--stage pcsc` | [Boundary Dice model](./src/ultralytics/cfg/models/11/yolo11x-seg-boundary-dice.yaml) | [model/a/best.pt](./model/a/best.pt) |
+| **B: BAPS-only** | Base + boundary pixel BCE, without boundary Dice | `--stage baps` | Same joint boundary model, `boundary_mode=bce` | Requires training |
 | **A+B: BDS + BAPS** | Base + BDS + BAPS | `--stage baps_pcsc` | [Joint boundary model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas.yaml) | [model/ab/best.pt](./model/ab/best.pt) |
 | **FieldBCQ** | Base + BDS + BAPS + RBQS | `--stage fieldbcq` | [Complete model](./src/ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml) | [model/abc/best.pt](./model/abc/best.pt) |
 
 Legacy CLI/output identifiers `pcsc` and `baps_pcsc` correspond to BDS and the joint boundary configuration. Historical names PCSC and RBQC correspond to BDS and RBQS. The summary CSV calls A+B `BAPS + BDS`; both names denote the same two losses. Existing model definitions, checkpoint folders, and Python class paths are retained for compatibility.
 
-One checkpoint is included per configuration. Their identities have not been matched to all three historical rounds, so evaluating these files does not recreate the manuscript's repeated-run summary. The repository does not include all 12 main-experiment checkpoints or reference-model checkpoints.
+One checkpoint is included for each of the four archived configurations. Their identities have not been matched to all three historical rounds, so evaluating these files does not recreate the manuscript's repeated-run summary. The repository does not include all 12 historical main-experiment checkpoints, a BAPS-only checkpoint, or reference-model checkpoints.
 
 ## AgriParcel-MS Dataset
 

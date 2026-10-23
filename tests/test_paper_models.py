@@ -15,10 +15,20 @@ import torch
 from check_paper_models import check_configuration
 from train_paper import STAGES
 from ultralytics.nn.modules.head import BASMQCSegment, Detect
-from ultralytics.utils.loss import v8BASMQCSegmentationLoss
+from ultralytics.utils.loss import v8BASMQCSegmentationLoss, v8BAPSSegmentationLoss, v8BASSegmentationLoss
 
 
 class PaperModelTests(unittest.TestCase):
+    def test_baps_only_matches_bce_without_the_dice_term(self):
+        logits = torch.tensor([[[[-1.0, 0.2], [0.7, 2.0]]]], requires_grad=True)
+        target = torch.tensor([[[[0.0, 1.0], [1.0, 0.0]]]])
+        actual = v8BAPSSegmentationLoss._boundary_aux_loss(logits, target)
+        expected = torch.nn.functional.binary_cross_entropy_with_logits(logits, target)
+        torch.testing.assert_close(actual, expected)
+        self.assertGreater(v8BASSegmentationLoss._boundary_aux_loss(logits, target).item(), actual.item())
+        actual.backward()
+        torch.testing.assert_close(logits.grad, (logits.detach().sigmoid() - target) / target.numel())
+
     @classmethod
     def setUpClass(cls):
         cls.previous_threads = torch.get_num_threads()

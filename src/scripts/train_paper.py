@@ -24,6 +24,11 @@ STAGES = {
         "name": "baps_pcsc",
         "overrides": {"boundary": 0.20},
     },
+    "baps": {
+        "model": "ultralytics/cfg/models/11/yolo11x-seg-bas.yaml",
+        "name": "baps",
+        "overrides": {"boundary": 0.20, "boundary_mode": "bce"},
+    },
     "fieldbcq": {
         "model": "ultralytics/cfg/models/11/yolo11x-seg-bas-mqc.yaml",
         "name": "fieldbcq",
@@ -35,10 +40,12 @@ STAGES = {
     },
 }
 
+STAGE_ALIASES = {"bds": "pcsc", "bds_baps": "baps_pcsc", "baps_only": "baps"}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--stage", choices=STAGES, default="baseline")
+    parser.add_argument("--stage", choices=[*STAGES, *STAGE_ALIASES], default="baseline")
     parser.add_argument("--data", default="data/datasets.yaml")
     parser.add_argument("--weights", default="model/pretrained/yolo11x-seg.pt")
     parser.add_argument("--epochs", type=int, default=80)
@@ -49,6 +56,7 @@ def parse_args():
     parser.add_argument("--val-fraction", type=float, default=1.0, help="Validation-set fraction; use 0.05 for smoke tests.")
     parser.add_argument("--device", default=None)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--amp", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--project", default="results/train")
     parser.add_argument("--name", default=None)
     parser.add_argument("--resume", default=None, help="Resume from a stage-specific last.pt checkpoint.")
@@ -62,7 +70,8 @@ def main():
         raise ValueError("--fraction must be in (0, 1]")
     if not 0.0 < args.val_fraction <= 1.0:
         raise ValueError("--val-fraction must be in (0, 1]")
-    stage = STAGES[args.stage]
+    stage_name = STAGE_ALIASES.get(args.stage, args.stage)
+    stage = STAGES[stage_name]
 
     if args.resume:
         model = YOLO(str(project_path(args.resume)))
@@ -85,12 +94,14 @@ def main():
             "deterministic": True,
             "project": str(project_path(args.project)),
             "name": args.name or f"{stage['name']}_seed{args.seed}",
-            "amp": True,
+            "amp": args.amp,
             **stage["overrides"],
         }
 
     if args.device is not None:
         train_args["device"] = args.device
+    from paper_runtime import attach_training_metadata
+    attach_training_metadata(model, stage_name, args, train_args)
     model.train(**train_args)
 
 

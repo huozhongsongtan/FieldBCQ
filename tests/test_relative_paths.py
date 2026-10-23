@@ -72,10 +72,11 @@ class RelativePathTests(unittest.TestCase):
                 os.chdir(old_cwd)
 
     def test_public_training_names_select_expected_model_and_losses(self):
-        self.assertEqual(set(self.train.STAGES), {"baseline", "pcsc", "baps_pcsc", "fieldbcq"})
+        self.assertEqual(set(self.train.STAGES), {"baseline", "pcsc", "baps", "baps_pcsc", "fieldbcq"})
         for stage in self.train.STAGES.values():
             self.assertTrue((ROOT / "src" / stage["model"]).is_file())
         configurations = [
+            ("baps", "yolo11x-seg-bas.yaml", {"boundary": 0.20, "boundary_mode": "bce"}),
             ("pcsc", "yolo11x-seg-boundary-dice.yaml", {"boundary": 0.20}),
             ("baps_pcsc", "yolo11x-seg-bas.yaml", {"boundary": 0.20}),
             ("fieldbcq", "yolo11x-seg-bas-mqc.yaml", {

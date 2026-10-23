@@ -99,6 +99,7 @@ box: 7.5 # (float) box loss gain
 cls: 0.5 # (float) cls loss gain (scale with pixels)
 dfl: 1.5 # (float) dfl loss gain
 boundary: 0.20 # (float) PCSC / BAPS auxiliary boundary loss gain
+boundary_mode: dice_bce # (str) Segment_BAS objective: dice_bce (joint) or bce (BAPS-only)
 btq_quality: 0.25 # (float) mask-IoU and boundary-F1 quality calibration gain
 btq_boundary_width: 2 # (int) boundary tolerance at prototype resolution
 pose: 12.0 # (float) pose loss gain
