@@ -8,7 +8,7 @@ On the fixed **AgriParcel-MS** test set of **2,000 images and 21,190 patch-level
 
 This repository provides the implementation, training and native evaluation entry points, four archived checkpoints, and dataset/result summaries. The underlying imagery and annotations must be obtained from the original sources.
 
-The five-way ablation now includes an independently trainable **BAPS-only** configuration (`--stage baps`). See [论文实验补充说明](./PAPER_EXPERIMENTS.md) for training, validation, paper metrics, efficiency measurements and multi-seed summaries. BAPS-only requires a new training run; no trained BAPS-only checkpoint or result is bundled.
+The five-way ablation includes an independently trainable **BAPS-only** configuration (`--stage baps`). BAPS-only requires a new training run; no trained BAPS-only checkpoint or result is bundled.
 
 ## Method
 

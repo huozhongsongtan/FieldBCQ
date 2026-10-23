@@ -5,6 +5,11 @@ import sys
 from pathlib import Path
 
 
+# Set before importing OpenCV (including in spawned workers). Keep native errors visible.
+# Override with OPENCV_LOG_LEVEL=WARNING when diagnosing image-reader warnings.
+os.environ.setdefault("OPENCV_LOG_LEVEL", "ERROR")
+
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = str(PROJECT_ROOT / "src")
 if SOURCE_ROOT not in sys.path:
