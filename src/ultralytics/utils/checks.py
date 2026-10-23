@@ -687,6 +687,12 @@ def check_amp(model):
 
     im = ASSETS / "bus.jpg"  # image to check
     prefix = colorstr("AMP: ")
+    if not im.is_file():
+        LOGGER.warning(
+            f"{prefix}check image missing: {im}. AMP will be disabled for this run. "
+            "Restore ultralytics/assets/bus.jpg to run the AMP checks."
+        )
+        return False
     LOGGER.info(f"{prefix}running Automatic Mixed Precision (AMP) checks with YOLO11n...")
     warning_msg = "Setting 'amp=True'. If you experience zero-mAP or NaN losses you can disable AMP with amp=False."
     try:
