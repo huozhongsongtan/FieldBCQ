@@ -49,16 +49,24 @@ class PaperEvaluationTests(unittest.TestCase):
                 original_hash = sha256(checkpoint)
                 args = SimpleNamespace(tables=list(range(4, 10)), imgsz=64, batch=2, workers=0, device="cpu")
                 raw_scores = []
+                input_grids = []
                 original = SegmentationValidator.postprocess
+                original_update = SegmentationValidator.preprocess
+
+                def capture_grid(validator, batch):
+                    input_grids.append(tuple(batch["img"].shape[-2:]))
+                    return original_update(validator, batch)
 
                 def capture(validator, predictions):
                     raw_scores.append(float(predictions[0][:, 4].max()))
                     return original(validator, predictions)
 
-                with patch.object(SegmentationValidator, "postprocess", capture):
+                with patch.object(SegmentationValidator, "postprocess", capture), \
+                     patch.object(SegmentationValidator, "preprocess", capture_grid):
                     c, cr = evaluate(checkpoint, "fieldbcq", args, data, paths, root / "class", "class")
                     j, jr = evaluate(checkpoint, "fieldbcq", args, data, paths, root / "joint", "joint")
                 self.assertEqual(len(raw_scores), 2)  # one batch per mode, no second prediction pass
+                self.assertTrue(any(max(shape) > args.imgsz for shape in input_grids))
                 self.assertAlmostEqual(raw_scores[0], torch.sigmoid(torch.tensor(2.)).item(), places=5)
                 self.assertAlmostEqual(raw_scores[1] / raw_scores[0], torch.sigmoid(torch.tensor(-3.)).item(), places=5)
                 for report, records in ((c, cr), (j, jr)):

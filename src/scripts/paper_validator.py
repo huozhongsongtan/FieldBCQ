@@ -64,13 +64,14 @@ def validator_class(records, labels, size, fixed, scope=None, native=True):
                     path = Path(batch["im_file"][si]).resolve()
                     if path in records:
                         raise ValueError(f"Duplicate evaluated image: {path}")
-                    gt, gc, _ = load_targets(labels[path], prepared["ori_shape"], size)
+                    ratio_pad = prepared["ratio_pad"]
+                    gt, gc, _ = load_targets(labels[path], prepared["ori_shape"], size, ratio_pad=ratio_pad)
                     keep = pred[:, 4] >= 0.25
                     retained = pred[keep]
                     if len(retained):
                         masks = ops.process_mask(proto, retained[:, 6:], retained[:, :4],
                                                  shape=prepared["imgsz"], upsample=True).cpu().numpy().astype(bool)
-                        masks = square_evaluation_masks(masks, prepared["ori_shape"], size)
+                        masks = square_evaluation_masks(masks, prepared["ori_shape"], size, ratio_pad=ratio_pad)
                     else:
                         masks = np.zeros((0, size, size), dtype=bool)
                     records[path] = image_metrics(masks, gt, retained[:, 4].cpu().numpy(),

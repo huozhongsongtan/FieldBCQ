@@ -80,13 +80,34 @@ def load_metadata(path, root, images):
         result[image] = {**row, "source": source, "resolution_m": format(resolution, "g")}
     return result
 
-def load_targets(label, original_shape, size):
+def evaluation_content_shape(original_shape, size, ratio_pad=None):
+    """Use recorded loader resize ratios (height, width), including ceil rounding."""
+    height, width = original_shape
+    if size <= 0 or min(height, width) <= 0:
+        raise ValueError("Image and evaluation grid dimensions must be positive")
+    if ratio_pad is None:
+        gain = min(size / height, size / width)
+        content_h, content_w = round(height * gain), round(width * gain)
+    else:
+        (gain_h, gain_w), _ = ratio_pad
+        if not all(math.isfinite(float(g)) and g > 0 for g in (gain_h, gain_w)):
+            raise ValueError("Invalid recorded image resize ratios")
+        content_h, content_w = round(height * gain_h), round(width * gain_w)
+    if not (0 < content_h <= size and 0 < content_w <= size):
+        raise ValueError(f"Resized content {(content_h, content_w)} cannot fit the {size} square grid")
+    return content_h, content_w
+
+
+def load_targets(label, original_shape, size, ratio_pad=None):
     import cv2
     import numpy as np
     height, width = original_shape
     scale = min(size / height, size / width)
-    left = round((size - round(width * scale)) / 2 - 0.1)
-    top = round((size - round(height * scale)) / 2 - 0.1)
+    content_h, content_w = evaluation_content_shape(original_shape, size, ratio_pad)
+    left = round((size - content_w) / 2 - 0.1)
+    top = round((size - content_h) / 2 - 0.1)
+    # Retain the original standalone/predictor convention when no loader metadata is supplied.
+    polygon_scale = [width * scale, height * scale] if ratio_pad is None else [content_w, content_h]
     classes, masks = [], []
     for line_number, line in enumerate(label.read_text(encoding="utf-8-sig").splitlines(), 1):
         if not line.strip():
@@ -96,7 +117,7 @@ def load_targets(label, original_shape, size):
             raise ValueError(f"Malformed polygon: {label}:{line_number}")
         if values[0] != 0 or (values[1:] < 0).any() or (values[1:] > 1).any():
             raise ValueError(f"Require class 0 and normalized polygon coordinates: {label}:{line_number}")
-        points = values[1:].reshape(-1, 2) * [width * scale, height * scale] + [left, top]
+        points = values[1:].reshape(-1, 2) * polygon_scale + [left, top]
         mask = np.zeros((size, size), dtype=np.uint8)
         cv2.fillPoly(mask, [points.astype(np.int32)], 1)
         if not mask.any():
@@ -106,31 +127,41 @@ def load_targets(label, original_shape, size):
     return np.asarray(masks, dtype=bool).reshape(-1, size, size), np.asarray(classes, dtype=int), scale
 
 
-def square_evaluation_masks(masks, original_shape, size):
-    """Translate rect input-grid masks to the square GT grid, preserving every pixel.
+def square_evaluation_masks(masks, original_shape, size, ratio_pad=None):
+    """Translate loader/predictor masks to the square GT grid without resampling.
 
-    Prediction uses the same longest-side scale as the square grid, but can omit
-    stride-aligned padding. Restore only that padding; never stretch contours.
+    Rect validation can add stride padding beyond imgsz (e.g. 672 for imgsz=640).
+    Crop only portions outside the destination grid, or add missing padding.
+    Recorded loader ratios/padding account for non-square image resize rounding.
     """
     import numpy as np
     masks = np.asarray(masks, dtype=bool)
     if masks.ndim != 3 or size <= 0 or min(original_shape) <= 0:
         raise ValueError("Expected N,H,W masks and positive original/image sizes")
-    height, width = original_shape
-    gain = min(size / height, size / width)
-    content_h, content_w = round(height * gain), round(width * gain)
+    content_h, content_w = evaluation_content_shape(original_shape, size, ratio_pad)
     mask_h, mask_w = masks.shape[1:]
-    if not (content_h <= mask_h <= size and content_w <= mask_w <= size):
+    if mask_h < content_h or mask_w < content_w:
         raise ValueError(f"Mask grid {masks.shape[1:]} is incompatible with imgsz={size}, original={original_shape}")
     square_top = round((size - content_h) / 2 - 0.1)
     square_left = round((size - content_w) / 2 - 0.1)
-    rect_top = round((mask_h - content_h) / 2 - 0.1)
-    rect_left = round((mask_w - content_w) / 2 - 0.1)
+    if ratio_pad is None:
+        rect_top = round((mask_h - content_h) / 2 - 0.1)
+        rect_left = round((mask_w - content_w) / 2 - 0.1)
+    else:
+        rect_left, rect_top = ratio_pad[1]
+        if any(not math.isfinite(float(v)) or int(v) != v for v in (rect_top, rect_left)):
+            raise ValueError("Loader padding must be integer pixel offsets")
+        rect_left, rect_top = int(rect_left), int(rect_top)
+    if min(rect_top, rect_left) < 0 or rect_top + content_h > mask_h or rect_left + content_w > mask_w:
+        raise ValueError("Recorded padding/content does not fit the mask grid")
     top, left = square_top - rect_top, square_left - rect_left
-    if top < 0 or left < 0 or top + mask_h > size or left + mask_w > size:
-        raise ValueError("Rectangular padding does not align with the square evaluation grid")
-    if (mask_h, mask_w) == (size, size):
+    if (mask_h, mask_w) == (size, size) and top == left == 0:
         return masks
     output = np.zeros((len(masks), size, size), dtype=bool)
-    output[:, top:top + mask_h, left:left + mask_w] = masks
+    source_top, source_left = max(0, -top), max(0, -left)
+    dest_top, dest_left = max(0, top), max(0, left)
+    copy_h = min(mask_h - source_top, size - dest_top)
+    copy_w = min(mask_w - source_left, size - dest_left)
+    output[:, dest_top:dest_top + copy_h, dest_left:dest_left + copy_w] = masks[
+        :, source_top:source_top + copy_h, source_left:source_left + copy_w]
     return output

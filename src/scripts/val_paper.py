@@ -116,14 +116,14 @@ def main(argv=None):
     if output.exists():
         raise FileExistsError(f'Choose a new --project directory: {output}')
     output.mkdir(parents=True)
-    provenance = dict(version='fieldbcq-tables4-10-v2', status='running', arguments=vars(args),
+    provenance = dict(version='fieldbcq-tables4-10-v3', status='running', arguments=vars(args),
                       environment=environment(), code=code_provenance(), data_yaml_sha256=sha256(data_path),
                       dataset_content_sha256=digest, dataset_manifest=manifest,
                       metadata_sha256=sha256(project_path(args.metadata_csv)) if metadata else None,
                       protocol=dict(precision='fp32', rect=True, augment=False, native_conf=0.001, fixed_conf=0.25,
                                     nms_iou=0.70, max_det=710, match_iou=0.5, boundary_tolerance_px=2,
                                     small_area_px=1024, calibration_bins=10,
-                                    fixed_grid='square letterbox; full-resolution binary masks; integer GT polygons',
+                                    fixed_grid='square letterbox from recorded loader resize/padding; translate/crop padding without mask resampling; integer GT polygons',
                                     boundary='two-sided 3x3 morphology, square tolerance; unmatched boundaries in denominators',
                                     matching='descending score; highest available same-class mask IoU >= 0.5',
                                     ece='all retained predictions; score vs best same-class mask IoU; 10 equal-width bins',
