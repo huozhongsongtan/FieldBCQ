@@ -67,6 +67,17 @@ python src/scripts/val_paper.py --check-only
 python src/scripts/val_paper.py --device 0 --project results/paper_round2_tables4_10
 ```
 
+`--check-only` 会拒绝空权重和尚未下载的 Git LFS 指针文件，不执行模型反序列化或推理。若遇到 `Git LFS pointer` 或 PyTorch 的 `invalid load key, 'v'`，先将权重下载并写入工作区：
+
+```bash
+git lfs install --local
+git lfs fetch origin main --include="model/**/*.pt" --exclude=""
+git lfs checkout
+python src/scripts/val_paper.py --check-only
+```
+
+也可将二轮的原始 `best.pt` 按上表复制到服务器。真实权重每份约125—129 MB；以 `version https://git-lfs.github.com/spec/v1` 开头的文件是指针文本。失败的评测目录会保留provenance记录，重跑时使用新的 `--project` 路径。
+
 默认计算表4—10。重复运行时指定新的输出目录。需要重跑其中一张表时：
 
 ```bash

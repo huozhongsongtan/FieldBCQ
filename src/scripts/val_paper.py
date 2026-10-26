@@ -28,12 +28,30 @@ def parse_args(argv=None):
     parser.add_argument('--batch', type=int, default=8)
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--tables', nargs='+', type=int, choices=range(4, 11), default=list(range(4, 11)))
-    parser.add_argument('--check-only', action='store_true', help='Verify paths, metadata and all image/label hashes, without inference')
+    parser.add_argument('--check-only', action='store_true', help='Reject missing/empty/LFS-pointer weights; verify metadata and image/label hashes without inference')
     args = parser.parse_args(argv)
     if args.imgsz <= 0 or args.imgsz % 32 or args.batch < 1 or args.workers < 0:
         parser.error('imgsz must be a positive multiple of 32; batch positive; workers nonnegative')
     args.tables = sorted(set(args.tables))
     return args
+
+
+def check_weight_file(path):
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(path)
+    with path.open('rb') as handle:
+        header = handle.read(256)
+    if not header:
+        raise ValueError(f'Checkpoint is empty: {path}; download or copy the complete best.pt')
+    if header.lstrip().startswith(b'version https://git-lfs.github.com/spec/'):
+        raise ValueError(
+            f'Checkpoint is a Git LFS pointer, not downloaded model weights: {path}\n'
+            'Run these commands from the repository root, then rerun --check-only:\n'
+            '  git lfs install --local\n'
+            '  git lfs fetch origin main --include="model/**/*.pt" --exclude=""\n'
+            '  git lfs checkout\n'
+            'If LFS objects are unavailable, copy the original round-2 best.pt files into model/.')
 
 
 def models_to_run(args):
@@ -53,8 +71,7 @@ def models_to_run(args):
         overrides.add(model)
         paths[model] = project_path(path)
     for path in paths.values():
-        if not path.is_file():
-            raise FileNotFoundError(path)
+        check_weight_file(path)
     return [(m, paths[m]) for m in MODELS if m in required]
 
 

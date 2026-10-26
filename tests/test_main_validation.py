@@ -16,6 +16,33 @@ from test_paper_metrics import masks, measure
 
 
 class MainValidationTests(unittest.TestCase):
+    def test_lfs_pointer_is_rejected_before_dataset_scanning_or_model_loading(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            weight = Path(tmp) / 'abc/best.pt'
+            weight.parent.mkdir()
+            weight.write_text('version https://git-lfs.github.com/spec/v1\n'
+                              'oid sha256:' + 'a'*64 + '\nsize 128644434\n', encoding='utf-8')
+            for flags in ([], ['--check-only']):
+                with self.subTest(flags=flags), patch.object(val_paper, 'prepare_dataset') as dataset:
+                    with patch.object(val_paper, 'evaluate') as evaluation:
+                        with self.assertRaisesRegex(ValueError, 'Git LFS pointer') as error:
+                            val_paper.main(['--tables', '6', '--weights-root', tmp] + flags)
+                    dataset.assert_not_called()
+                    evaluation.assert_not_called()
+                    self.assertIn('git lfs fetch', str(error.exception))
+
+    def test_empty_missing_and_materialized_checkpoint_headers(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            weight = Path(tmp) / 'best.pt'
+            with self.assertRaises(FileNotFoundError):
+                val_paper.check_weight_file(weight)
+            weight.touch()
+            with self.assertRaisesRegex(ValueError, 'empty'):
+                val_paper.check_weight_file(weight)
+            for header in (b'PK\x03\x04archive fixture', b'\x80\x02legacy pickle fixture'):
+                weight.write_bytes(header)
+                val_paper.check_weight_file(weight)
+
     def test_default_paths_and_requested_models(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             root = Path(tmp)
