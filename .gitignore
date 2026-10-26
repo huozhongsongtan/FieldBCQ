@@ -40,3 +40,6 @@ results/runtime_config/
 # Local image and polygon datasets
 data/images/
 data/labels/
+
+results/tables4_10/
+results/paper_round2_*/

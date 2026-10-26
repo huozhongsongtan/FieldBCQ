@@ -17,7 +17,6 @@ from project_paths import PROJECT_ROOT
 from quality_scoring import set_quality_scoring
 
 
-EVALUATOR_VERSION = "fieldbcq-paper-v1"
 
 
 def sha256(path):
@@ -146,39 +145,35 @@ def attach_training_metadata(model, stage, cli_args, train_args):
     model.add_callback("on_train_end", end)
 
 
-def benchmark(weights, imgsz=640, batch=1, device="cpu", half=False, warmup=20, iterations=100,
-              conf=0.001, iou=0.70, max_det=710, images=None, quality_blend=None, quality_mode=None, rect=True):
-    """Measure raw forward and decoded-image prediction separately; no disk I/O in timing."""
+def benchmark(weights, imgsz=640, device="0", image=None, quality_mode=None,
+              expected=None, warmup=50, iterations=200):
+    """Table 10 only: FP32, batch one, 2*THOP MACs, synchronized mean latencies."""
     import copy
     import numpy as np
     import torch
+    from thop import profile
     from ultralytics import YOLO
     from ultralytics.utils.torch_utils import select_device
 
+    if image is None or image.ndim != 3 or image.shape[2] != 3:
+        raise ValueError("Table 10 requires a decoded real BGR image")
+    if warmup < 0 or iterations < 1:
+        raise ValueError("Invalid benchmark iteration count")
     selected = select_device(device, verbose=False)
-    if half and selected.type != "cuda":
-        raise ValueError("FP16 benchmark requires a CUDA device; use fp32 for CPU.")
     wrapper = YOLO(str(weights))
-    network = wrapper.model.to(selected).eval()
-    scoring = set_quality_scoring(network, quality_mode, quality_blend)
+    if expected is not None and configuration_of(wrapper.model) != expected:
+        raise ValueError(f"Wrong benchmark checkpoint configuration: {weights}")
+    network = wrapper.model.to(selected).float().eval()
+    scoring = set_quality_scoring(network, quality_mode)
     parameters = sum(p.numel() for p in network.parameters())
-    profile_error, gflops = None, None
-    profiled = sample = None
-    try:
-        from thop import profile
-        profiled = copy.deepcopy(network).float()
-        sample = torch.zeros(1, 3, imgsz, imgsz, device=selected)
-        with torch.inference_mode():
-            macs, _ = profile(profiled, inputs=(sample,), verbose=False)
-        gflops = 2 * macs / 1e9
-    except (ImportError, RuntimeError, TypeError, AttributeError, ValueError, KeyError) as exc:
-        profile_error = str(exc)
-    finally:
-        del profiled, sample
-        if selected.type == "cuda":
-            torch.cuda.empty_cache()
-    network.half() if half else network.float()
-    tensor = torch.zeros(batch, 3, imgsz, imgsz, device=selected, dtype=torch.float16 if half else torch.float32)
+    sample = torch.zeros(1, 3, imgsz, imgsz, device=selected, dtype=torch.float32)
+    profiled = copy.deepcopy(network)
+    with torch.inference_mode():
+        macs, _ = profile(profiled, inputs=(sample,), verbose=False)
+    gflops = 2 * macs / 1e9
+    del profiled
+    if not np.isfinite(gflops) or gflops <= 0:
+        raise RuntimeError("THOP did not produce valid GFLOPs")
 
     def sync():
         if selected.type == "cuda":
@@ -189,46 +184,26 @@ def benchmark(weights, imgsz=640, batch=1, device="cpu", half=False, warmup=20, 
             for _ in range(warmup):
                 operation()
             sync()
-            if selected.type == "cuda":
-                torch.cuda.reset_peak_memory_stats(selected)
             durations = []
             for _ in range(iterations):
                 sync()
                 start = time.perf_counter()
                 result = operation()
                 sync()
-                durations.append(time.perf_counter() - start)
+                durations.append((time.perf_counter() - start) * 1000)
                 del result
-        mean = float(np.mean(durations))
-        return {
-            "batch_latency_ms_mean": 1000 * mean,
-            "batch_latency_ms_p50": 1000 * float(np.percentile(durations, 50)),
-            "batch_latency_ms_p95": 1000 * float(np.percentile(durations, 95)),
-            "amortized_ms_per_image": 1000 * mean / batch, "images_per_second": batch / mean,
-            "peak_allocated_bytes": torch.cuda.max_memory_allocated(selected) if selected.type == "cuda" else None,
-            "peak_reserved_bytes": torch.cuda.max_memory_reserved(selected) if selected.type == "cuda" else None,
-        }
+        return float(np.mean(durations))
 
-    raw = measure(lambda: network(tensor))
-    del tensor
-    if images is not None:
-        decoded = [images[index % len(images)] for index in range(batch)]
-        image_kind = "first decoded evaluation images (cycled if fewer than batch)"
-    else:
-        decoded = [np.zeros((imgsz, imgsz, 3), dtype=np.uint8) for _ in range(batch)]
-        image_kind = "blank synthetic images; postprocessing cost is not representative"
-    options = dict(source=decoded, imgsz=imgsz, batch=batch, device=str(selected), half=half,
-                   rect=rect, conf=conf, iou=iou, max_det=max_det, verbose=False, save=False)
-    wrapper.predict(**options)  # initialize predictor outside timed scope
-    pipeline = measure(lambda: wrapper.predict(**options))
-    return {
-        "parameters_total": parameters, "gflops_per_image": gflops, "flops_definition": "2 * THOP MACs",
-        "flops_profile_error": profile_error, "batch": batch, "imgsz": imgsz,
-        "precision": "fp16" if half else "fp32", "device": str(selected),
-        "warmup_batches": warmup, "timed_batches": iterations, "cuda_synchronized": selected.type == "cuda",
-        "raw_forward": raw, "decoded_image_pipeline": pipeline, "pipeline_inputs": image_kind,
-        "raw_scope": "resident tensor -> unfused eval model forward including quality fusion; excludes preprocessing/NMS",
-        "pipeline_scope": "decoded BGR images -> preprocessing, model (predictor may fuse layers), NMS, masks, Results; excludes disk I/O and metrics",
-        "conf": conf, "nms_iou": iou, "max_det": max_det, "rect": rect, **scoring,
-        "cpu_peak_memory": "not measured; CUDA memory values are null on CPU",
-    }
+    raw_ms = measure(lambda: network(sample))
+    # Decode and initialize before timing; square input and batch one match the paper.
+    options = dict(source=[image], imgsz=imgsz, batch=1, device=str(selected), half=False,
+                   rect=False, conf=0.001, iou=0.70, max_det=710, verbose=False, save=False)
+    wrapper.predict(**options)
+    pipeline_ms = measure(lambda: wrapper.predict(**options))
+    return dict(parameters_total=parameters, gflops_per_image=gflops, raw_forward_ms=raw_ms,
+                prediction_pipeline_ms=pipeline_ms, device=str(selected), precision="fp32",
+                batch=1, imgsz=imgsz, warmup=warmup, iterations=iterations,
+                cuda_synchronized=selected.type == "cuda", flops_definition="2 * THOP MACs; unfused eval graph",
+                raw_scope="resident FP32 tensor -> unfused eval forward, excludes preprocessing and NMS",
+                pipeline_scope="decoded BGR image -> preprocessing, predictor forward, NMS, masks; excludes disk and metrics",
+                **scoring)

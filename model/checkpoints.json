@@ -1,0 +1,54 @@
+{
+  "copied_at": "2026-10-26T13:59:09.044434+00:00",
+  "operation": "copy; original best.pt retained",
+  "checkpoints": [
+    {
+      "model": "baseline",
+      "source": "F:\\project\\二轮\\exp\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\baseline\\best.pt",
+      "sha256": "b9377e968a3566708305fe39ed39ad83ced8d4a1cfadb90e2b7cac64c916b5c0"
+    },
+    {
+      "model": "a",
+      "source": "F:\\project\\二轮\\a_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\a\\best.pt",
+      "sha256": "0dc856f52255ff5b0a6a7d86fb98f0dca48a233f07d25c1dd8a2cca87e825a9f"
+    },
+    {
+      "model": "b",
+      "source": "F:\\project\\二轮\\b_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\b\\best.pt",
+      "sha256": "60043fc0b1f03e05530a1229b942bba31bae8cd0a5faef9c29842b5fd1340cfa"
+    },
+    {
+      "model": "c",
+      "source": "F:\\project\\二轮\\c_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\c\\best.pt",
+      "sha256": "217d06b8135a7e35dc81bd7f503bf82195521d81b68bb3a86d26295e7e102c60"
+    },
+    {
+      "model": "ab",
+      "source": "F:\\project\\二轮\\ab_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\ab\\best.pt",
+      "sha256": "6b77e1e68a8868ed91223b479a1cc36c4351a24f72f19dc1f54453d39ab94c92"
+    },
+    {
+      "model": "ac",
+      "source": "F:\\project\\二轮\\ac_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\ac\\best.pt",
+      "sha256": "50f95f7e8e3c74298f0cbbde7dc3892d770c6820d4c20f9c1c78fd826ad45689"
+    },
+    {
+      "model": "bc",
+      "source": "F:\\project\\二轮\\bc_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\bc\\best.pt",
+      "sha256": "12047523844fc87544a13bb49e6cdc0952b3719e10b0f6fe241c038d33c2c1a7"
+    },
+    {
+      "model": "abc",
+      "source": "F:\\project\\二轮\\abc_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\abc\\best.pt",
+      "sha256": "9478ca900e11e170d321953451d1ae441dbe58abf188059f077c916537b21248"
+    }
+  ]
+}
