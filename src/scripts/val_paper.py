@@ -20,8 +20,8 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--weights-root', default='model')
     parser.add_argument('--weights', action='append', default=[], metavar='MODEL=PATH', help='Override one named checkpoint')
-    parser.add_argument('--data', default='data/paper_test.yaml')
-    parser.add_argument('--metadata-csv', default='data/paper_test_metadata.csv')
+    parser.add_argument('--data', default='data/datasets.yaml')
+    parser.add_argument('--metadata-csv', help='External metadata CSV required for tables 8 and 9')
     parser.add_argument('--project', default='results/tables4_10', help='New output directory; existing directories are rejected')
     parser.add_argument('--device', default='0', help='CUDA index, or cpu for a separately labelled CPU run')
     parser.add_argument('--imgsz', type=int, default=640)
@@ -33,6 +33,8 @@ def parse_args(argv=None):
     if args.imgsz <= 0 or args.imgsz % 32 or args.batch < 1 or args.workers < 0:
         parser.error('imgsz must be a positive multiple of 32; batch positive; workers nonnegative')
     args.tables = sorted(set(args.tables))
+    if set(args.tables) & {8, 9} and not args.metadata_csv:
+        parser.error('--metadata-csv is required for tables 8 and 9; use --tables 4 5 6 7 10 without metadata')
     return args
 
 

@@ -2,6 +2,8 @@
 
 基于 YOLO11x-seg 的田块实例分割。A 为边界 Dice 监督（BDS），B 为边界像素 BCE 监督（BAPS），C 为区域与边界质量评分（RBQS）。联合评分为 `class_score * sqrt(region_quality * boundary_quality)`。
 
+目录导航：[项目目录说明](项目目录说明.md)
+
 ## 安装
 
 在项目根目录使用与服务器 CUDA 匹配的 PyTorch 环境：
@@ -45,7 +47,7 @@ python -m pip install -e ./src
 
 ### 服务器数据路径
 
-将 `data/paper_test.yaml` 中的 `path` 修改为服务器数据集根目录。该目录应包含 `images/test` 和对应的 `labels/test`；负样本必须有空的标签文件。例如：
+将 `data/datasets.yaml` 中的 `path` 修改为服务器数据集根目录。该目录应包含 `images/test` 和对应的 `labels/test`；负样本必须有空的标签文件。例如：
 
 ```yaml
 path: /data/AgriParcel
@@ -56,15 +58,15 @@ nc: 1
 names: [field]
 ```
 
-`data/paper_test_metadata.csv` 来自现有固定测试集清单，共2000张影像、21190个实例，保留来源、分辨率、实例数及影像/标签校验值。程序验证完整覆盖和文件哈希，防止漏图、错配或混入其他测试集。影像文件名应与清单一致；同名文件存在歧义时，`image` 列须改为相对于数据集根目录的路径。
+仓库内 `data/` 仅保留 `datasets.yaml`，影像与标签需另行配置。表8、表9的分来源和分辨率统计还需通过 `--metadata-csv` 指定外部清单；程序会核验影像覆盖和清单内提供的文件哈希。
 
 ### 执行
 
 服务器先核对文件，随后正式评测：
 
 ```bash
-python src/scripts/val_paper.py --check-only
-python src/scripts/val_paper.py --device 0 --project results/paper_round2_tables4_10
+python src/scripts/val_paper.py --tables 4 5 6 7 10 --check-only
+python src/scripts/val_paper.py --tables 4 5 6 7 10 --device 0 --project results/paper_round2
 ```
 
 `--check-only` 会拒绝空权重和尚未下载的 Git LFS 指针文件，不执行模型反序列化或推理。若遇到 `Git LFS pointer` 或 PyTorch 的 `invalid load key, 'v'`，先将权重下载并写入工作区：
@@ -73,12 +75,12 @@ python src/scripts/val_paper.py --device 0 --project results/paper_round2_tables
 git lfs install --local
 git lfs fetch origin main --include="model/**/*.pt" --exclude=""
 git lfs checkout
-python src/scripts/val_paper.py --check-only
+python src/scripts/val_paper.py --tables 4 5 6 7 10 --check-only
 ```
 
 也可将二轮的原始 `best.pt` 按上表复制到服务器。真实权重每份约125—129 MB；以 `version https://git-lfs.github.com/spec/v1` 开头的文件是指针文本。失败的评测目录会保留provenance记录，重跑时使用新的 `--project` 路径。
 
-默认计算表4—10。重复运行时指定新的输出目录。需要重跑其中一张表时：
+默认选择表4—10，因此运行全部表格时需提供外部清单 `--metadata-csv /path/to/metadata.csv`。上方示例显式选择无需清单的表4、5、6、7、10。重复运行时指定新的输出目录。需要重跑其中一张表时：
 
 ```bash
 python src/scripts/val_paper.py --tables 6 --device 0 --project results/paper_round2_table6
@@ -120,12 +122,56 @@ python src/scripts/train_paper.py --stage fieldbcq --data data/datasets.yaml --w
 
 八组训练选项依次为 `baseline`、`pcsc`、`baps`、`rbqs`、`baps_pcsc`、`bds_rbqs`、`baps_rbqs`、`fieldbcq`。模型结构、损失和历史检查点类路径保留兼容。
 
-## 开发验证
+## 视觉分割后的后处理实验
 
-数值、表格、路径及小模型回归测试位于 `tests/`，可在服务器运行：
+FieldAgent 的最终实验已整合为 FieldBCQ 的后处理模块：**分割掩膜 → 无简化矢量化 → 三工具候选 → 视觉智能体选工具与编辑 → 离线评价**。五组主对照为原始预测、固定步长12、径向距离8px、DP 1px、智能体选工具＋视觉编辑，另列仅选工具阶段消融。
+
+统一入口为 `src/scripts/run_postprocess.py`，支持 `predict / local / gpt / report`。安装依赖后，从分割预测导出原图像素坐标矢量及后处理输入清单：
 
 ```bash
-python -m unittest discover -s tests
+python -m pip install -e "./src[postprocess]"
+python src/scripts/run_postprocess.py predict --output /path/to/predictions --data data/datasets.yaml --include-labels
 ```
 
-本次按要求未在本地执行评测或推理回归。原始影像与标注按各来源数据许可使用；模型框架沿用仓库的AGPL-3.0许可。
+`--include-labels` 用于离线评价；无标注数据可省略。导出的 `inputs.json` 记录影像、预测矢量和可选标注的位置。已有矢量也可自行准备同格式清单：
+
+```json
+{
+  "coordinate_space": "image_pixels",
+  "labels_offline_only": true,
+  "inputs": [{
+    "scene": "example",
+    "domain": "external",
+    "image": "/path/to/image.png",
+    "prediction_vector": "/path/to/prediction.pixel.geojson",
+    "label": "/path/to/label.txt"
+  }]
+}
+```
+
+服务配置文件由 `--planner` 指定，例如：
+
+```json
+{
+  "api": "responses",
+  "base_url": "https://your-service.example/v1",
+  "model": "your-vision-model",
+  "api_key_env": "OPENAI_API_KEY",
+  "vision": true,
+  "timeout_seconds": 90,
+  "max_output_tokens": 8192,
+  "max_instances": 1024
+}
+```
+
+替换为实际服务地址和模型名，并在对应环境变量中设置密钥。先运行本地候选阶段，再执行视觉智能体阶段：
+
+```bash
+python src/scripts/run_postprocess.py local --inputs /path/to/predictions/inputs.json --planner /path/to/planner.json --output /path/to/postprocess_run
+python src/scripts/run_postprocess.py gpt --output /path/to/postprocess_run
+python src/scripts/run_postprocess.py report --output /path/to/postprocess_run
+```
+
+本地阶段冻结输入和服务配置，`gpt` 阶段读取该配置并发起实际服务请求。GT只用于保存矢量后的离线评价。后处理使用原图像素坐标宏平均BF1，与表4—10的评价口径分别报告。实验输出在运行时创建；仓库不预存结果与示例数据。
+
+原始影像与标注按各来源数据许可使用；模型框架沿用仓库的AGPL-3.0许可。

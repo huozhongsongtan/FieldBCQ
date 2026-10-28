@@ -43,3 +43,7 @@ data/labels/
 
 results/tables4_10/
 results/paper_round2_*/
+
+# New post-segmentation runs; historical summaries are tracked.
+results/postprocessing/runs/
+results/postprocessing/predictions/

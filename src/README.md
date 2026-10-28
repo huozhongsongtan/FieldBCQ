@@ -4,8 +4,8 @@ FieldBCQ is a focused Ultralytics fork for farmland parcel instance segmentation
 with YOLO11x-seg. It provides all eight combinations of boundary Dice (BDS),
 boundary pixel BCE (BAPS), and region-boundary quality scoring (RBQS): Baseline,
 BDS, BAPS, BDS+BAPS, RBQS, BDS+RBQS, BAPS+RBQS, and FieldBCQ.
-Four historical checkpoints are bundled; BAPS-only, RBQS-only, BDS+RBQS,
-and BAPS+RBQS require new training.
+Eight round-2 best.pt checkpoints are bundled under ../model/.
+See [the project README](../README.md) for checkpoint provenance and current evaluation commands.
 
 Install the source in a dedicated Python 3.10+ environment:
 
