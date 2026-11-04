@@ -1,0 +1,88 @@
+{
+  "snapshot": "manuscript_20261104",
+  "created_utc": "2026-11-04T01:51:16.598289+00:00",
+  "result_origin": "transcribed from revised segmentation-only submission documents; no new training or accuracy evaluation",
+  "repository_head_at_transcription": "38ff318cb83064236b145bfea3d9805780686fd4",
+  "repository_has_uncommitted_changes": true,
+  "sources": [
+    {
+      "role": "main_manuscript",
+      "path": "01_Manuscripts/FieldBCQ for agricultural parcel delineation.docx",
+      "sha256": "8bb86e9bef060289b3270a5cfe52495f17baa3710ca38dddf48b235042f2a3a7"
+    },
+    {
+      "role": "supplementary_tables",
+      "path": "04_Supplementary_Material/FieldBCQ_Supplementary_Tables.docx",
+      "sha256": "0ad8fa9b2f7838ab7802e68f6838448e4c98b67bdd44303ca349de3c37460ba2"
+    }
+  ],
+  "tables": [
+    {
+      "file": "table_1.csv",
+      "source_role": "main_manuscript",
+      "caption": "Table 1 Composition of the selected data sources. Split columns report image counts.",
+      "rows_including_header": 5,
+      "sha256": "a53389823592bddde47d3a624467f0d457236f34186e1481220329957ce1d592"
+    },
+    {
+      "file": "table_2.csv",
+      "source_role": "main_manuscript",
+      "caption": "Table 2 Cross-model mask AP comparison on AgriParcel-MS. Values are percentages and rows are ordered by AP50–95. All six models use the training and test splits and common training budget in Section 2.6.1. Test results cover 2,000 images; AP summarizes mask overlap across confidence thresholds.",
+      "rows_including_header": 7,
+      "sha256": "de1caf981d23b3332ddd6bb682f3d3cc809ed7f75c01eefe2a02a0afe58a884f"
+    },
+    {
+      "file": "table_3.csv",
+      "source_role": "main_manuscript",
+      "caption": "Table 3 Fixed-threshold detection, count, and area results at confidence 0.25. Detection and area-relative-error metrics are percentages. Small parcels have area ≤ 1,024 pixels in the 640 × 640 evaluation grid. Count MAE covers all images; matched-parcel MAPE excludes unmatched instances. WAPE and net bias use foreground-union areas, and net bias retains its sign. Bold indicates better performance: higher detection metrics, lower error metrics, and smaller absolute net area bias.",
+      "rows_including_header": 10,
+      "sha256": "b7601ef0b391075a76ac1c783e84dc7911192fb8717cfb8262dd6eff81749cf8"
+    },
+    {
+      "file": "table_4.csv",
+      "source_role": "main_manuscript",
+      "caption": "Table 4 Module ablation and boundary structure. ✓ and × indicate enabled and disabled modules. A = BDS, B = BAPS, and C = RBQS; the all-disabled row is the baseline and the all-enabled row is FieldBCQ. Values are percentages except score–IoU ECE (0–1). P and R use the evaluator-selected best-F1 operating point; mAP denotes mask AP across confidence thresholds. Boundary-F1, merge rate, oversegmentation rate, and ECE use confidence 0.25. Matching uses mask IoU ≥ 0.50 and a boundary tolerance of 2 pixels on the 640 × 640 grid. Each configuration uses one checkpoint with training seed 0. Native F1 and AP75 are provided in Table S1. Bold indicates the best value in each metric column.",
+      "rows_including_header": 9,
+      "sha256": "e1d55b88d77c90019c601c667f812b4846eb98a9db7f066d4de48f90ddbe2824"
+    },
+    {
+      "file": "table_5.csv",
+      "source_role": "main_manuscript",
+      "caption": "Table 5 Same-checkpoint comparison of class-only and joint scoring. Both conditions use the complete model’s trained weights; class-only scoring disables inference fusion. AP is native; other metrics use confidence 0.25. Differences are calculated from unrounded results and expressed in percentage points except for ECE. Bold indicates better performance.",
+      "rows_including_header": 11,
+      "sha256": "5c6ee41411f0202ddd7b33b0e0079ed8dc34718c2900e51f3dcf1c4013d8ee46"
+    },
+    {
+      "file": "table_S1.csv",
+      "source_role": "supplementary_tables",
+      "caption": "Table S1. Complete native operating-point and mask AP results for the eight configurations.",
+      "rows_including_header": 9,
+      "sha256": "c4007ea6c1b613bdee40bb2d4838bad752948e81b7c0a9f98b986c98642c3662"
+    },
+    {
+      "file": "table_S2.csv",
+      "source_role": "supplementary_tables",
+      "caption": "Table S2. Source-group segmentation results at confidence 0.25.",
+      "rows_including_header": 4,
+      "sha256": "7098dc6e029cce772536fc17a62089f9df65c845fcdf83eb07e2152477b6c1ee"
+    },
+    {
+      "file": "table_S3.csv",
+      "source_role": "supplementary_tables",
+      "caption": "Table S3. Nominal-resolution groups at confidence 0.25.",
+      "rows_including_header": 9,
+      "sha256": "398ab3c4136a3cbdbbf25e48da0447db18648502f884bae9a644d8df6c474fc5"
+    }
+  ],
+  "historical_evaluation_code_commit": null,
+  "historical_full_test_content_hash": null,
+  "historical_checkpoint_to_raw_metric_linkage": "not independently reconstructed in this synchronization",
+  "checkpoint_verification": "Inventory carried forward; original weight bytes retained and checked during cleanup. This is not a rerun of accuracy metrics.",
+  "segmentation": {
+    "images": 2000,
+    "instance_annotations": 21190,
+    "checkpoints_per_configuration": 1,
+    "recorded_seed": 0
+  },
+  "evaluation_scope": "Previously explored fixed test split; all sources represented in both training and testing; not independent blind or source-held-out evaluation."
+}

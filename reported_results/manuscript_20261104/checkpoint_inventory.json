@@ -1,0 +1,102 @@
+{
+  "copied_at": "2026-10-26T13:59:09.044434+00:00",
+  "operation": "copy; original best.pt retained",
+  "checkpoints": [
+    {
+      "model": "baseline",
+      "source": "F:\\project\\二轮\\exp\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\baseline\\best.pt",
+      "sha256": "b9377e968a3566708305fe39ed39ad83ced8d4a1cfadb90e2b7cac64c916b5c0",
+      "actual_file_sha256": "b9377e968a3566708305fe39ed39ad83ced8d4a1cfadb90e2b7cac64c916b5c0",
+      "inventory_hash_matches": true,
+      "bytes": 124785306,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "2f8bbde812840eda983cbac3ffba9322dff5b71d5aa6fd8932f6743fcc949f68",
+      "historical_metrics_reproduced_in_this_update": false
+    },
+    {
+      "model": "a",
+      "source": "F:\\project\\二轮\\a_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\a\\best.pt",
+      "sha256": "0dc856f52255ff5b0a6a7d86fb98f0dca48a233f07d25c1dd8a2cca87e825a9f",
+      "actual_file_sha256": "0dc856f52255ff5b0a6a7d86fb98f0dca48a233f07d25c1dd8a2cca87e825a9f",
+      "inventory_hash_matches": true,
+      "bytes": 124807482,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "1ecfda0bc024a360e7f28eb1500507a5683afed03f5ae6073806a91ba25d3b51",
+      "historical_metrics_reproduced_in_this_update": false
+    },
+    {
+      "model": "b",
+      "source": "F:\\project\\二轮\\b_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\b\\best.pt",
+      "sha256": "60043fc0b1f03e05530a1229b942bba31bae8cd0a5faef9c29842b5fd1340cfa",
+      "actual_file_sha256": "60043fc0b1f03e05530a1229b942bba31bae8cd0a5faef9c29842b5fd1340cfa",
+      "inventory_hash_matches": true,
+      "bytes": 124807418,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "88804a40964485d9b50e1eb12084d69aaaafcf08eaa30d232f7d4a8c7805aefe",
+      "historical_metrics_reproduced_in_this_update": false
+    },
+    {
+      "model": "c",
+      "source": "F:\\project\\二轮\\c_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\c\\best.pt",
+      "sha256": "217d06b8135a7e35dc81bd7f503bf82195521d81b68bb3a86d26295e7e102c60",
+      "actual_file_sha256": "217d06b8135a7e35dc81bd7f503bf82195521d81b68bb3a86d26295e7e102c60",
+      "inventory_hash_matches": true,
+      "bytes": 128641618,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "fa411a7eefdd1f9a54f43658074b6d092b9a9c63a048d66ec2f3cd0bfe99ecff",
+      "historical_metrics_reproduced_in_this_update": false
+    },
+    {
+      "model": "ab",
+      "source": "F:\\project\\二轮\\ab_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\ab\\best.pt",
+      "sha256": "6b77e1e68a8868ed91223b479a1cc36c4351a24f72f19dc1f54453d39ab94c92",
+      "actual_file_sha256": "6b77e1e68a8868ed91223b479a1cc36c4351a24f72f19dc1f54453d39ab94c92",
+      "inventory_hash_matches": true,
+      "bytes": 124807418,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "64b96b522856ed5c684150560b1e19d621c34d770095f0ad8f7c640e216d91b1",
+      "historical_metrics_reproduced_in_this_update": false
+    },
+    {
+      "model": "ac",
+      "source": "F:\\project\\二轮\\ac_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\ac\\best.pt",
+      "sha256": "50f95f7e8e3c74298f0cbbde7dc3892d770c6820d4c20f9c1c78fd826ad45689",
+      "actual_file_sha256": "50f95f7e8e3c74298f0cbbde7dc3892d770c6820d4c20f9c1c78fd826ad45689",
+      "inventory_hash_matches": true,
+      "bytes": 128641618,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "dfd3945b77425320c19a5c059bada74d9fd63d825b149c34e6098b51cd194a2f",
+      "historical_metrics_reproduced_in_this_update": false
+    },
+    {
+      "model": "bc",
+      "source": "F:\\project\\二轮\\bc_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\bc\\best.pt",
+      "sha256": "12047523844fc87544a13bb49e6cdc0952b3719e10b0f6fe241c038d33c2c1a7",
+      "actual_file_sha256": "12047523844fc87544a13bb49e6cdc0952b3719e10b0f6fe241c038d33c2c1a7",
+      "inventory_hash_matches": true,
+      "bytes": 128641618,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "012ff387f56efb310894f7792d0fa900d23eff6beb9a774e56111e6f50baeb28",
+      "historical_metrics_reproduced_in_this_update": false
+    },
+    {
+      "model": "abc",
+      "source": "F:\\project\\二轮\\abc_seed01\\weights\\best.pt",
+      "target": "F:\\project\\FieldBCQ\\model\\abc\\best.pt",
+      "sha256": "9478ca900e11e170d321953451d1ae441dbe58abf188059f077c916537b21248",
+      "actual_file_sha256": "9478ca900e11e170d321953451d1ae441dbe58abf188059f077c916537b21248",
+      "inventory_hash_matches": true,
+      "bytes": 128644434,
+      "training_seed_from_saved_args": 0,
+      "saved_args_sha256": "7a00d5add249f03fccd80a69990f00480d9eaa6e665c5f45fa2b3380715edaba",
+      "historical_metrics_reproduced_in_this_update": false
+    }
+  ]
+}

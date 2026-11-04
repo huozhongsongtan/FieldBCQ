@@ -1,4 +1,4 @@
-"""Check all eight configurations; optionally load the four archived checkpoints."""
+"""Check all eight configurations; optionally load all eight bundled checkpoints."""
 
 import argparse
 import gc
@@ -17,10 +17,10 @@ EXPECTED = {
     "baseline": ("Segment", "v8SegmentationLoss", "baseline"),
     "pcsc": ("BoundaryDiceSegment", "v8BoundaryDiceSegmentationLoss", "a"),
     "baps_pcsc": ("Segment_BAS", "v8BASSegmentationLoss", "ab"),
-    "baps": ("Segment_BAS", "v8BAPSSegmentationLoss", None),
-    "rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", None),
-    "bds_rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", None),
-    "baps_rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", None),
+    "baps": ("Segment_BAS", "v8BAPSSegmentationLoss", "b"),
+    "rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", "c"),
+    "bds_rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", "ac"),
+    "baps_rbqs": ("BASMQCSegment", "v8BASMQCSegmentationLoss", "bc"),
     "fieldbcq": ("BASMQCSegment", "v8BASMQCSegmentationLoss", "abc"),
 }
 
@@ -79,7 +79,9 @@ def check_configuration(name):
 def check_checkpoint(name):
     expected_head, _, directory = EXPECTED[name]
     model = YOLO(str(project_path("model") / directory / "best.pt")).model.eval()
-    assert type(model.model[-1]).__name__ == expected_head
+    checkpoint_heads = {expected_head, "BASSegment"} if name == "baps" else {expected_head}
+    assert type(model.model[-1]).__name__ in checkpoint_heads
+    assert configuration_of(model) == name
     with torch.no_grad():
         prediction, _ = model(torch.zeros(1, 3, 64, 64))
     assert prediction.shape == (1, 37, 84)
@@ -88,7 +90,7 @@ def check_checkpoint(name):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoints", action="store_true", help="Also load all four archived checkpoints.")
+    parser.add_argument("--checkpoints", action="store_true", help="Also load all eight bundled checkpoints.")
     args = parser.parse_args()
     torch.set_num_threads(min(4, torch.get_num_threads()))
     for name in STAGES:
@@ -98,7 +100,7 @@ def main():
             check_checkpoint(name)
             gc.collect()
         print(f"{name}: configuration, inference, positive/empty loss and gradients passed; parameters={parameters:,}")
-    print("All eight configurations passed (B, C, A+C and B+C require new training).")
+    print("All eight configurations passed" + ("; all eight bundled checkpoints passed." if args.checkpoints else "."))
 
 
 if __name__ == "__main__":

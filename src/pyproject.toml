@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ultralytics"
 dynamic = ["version"]
-description = "FieldBCQ: boundary supervision, contour consistency and quality calibration for farmland parcel instance segmentation."
+description = "FieldBCQ: boundary supervision and region-boundary quality scoring for agricultural parcel instance segmentation."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"
@@ -59,17 +59,6 @@ dependencies = [
 
 # Optional dependencies ------------------------------------------------------------------------------------------------
 [project.optional-dependencies]
-postprocess = [
-    "numpy>=1.24,<3",
-    "scipy>=1.10",
-    "shapely>=2.1,<3",
-    "rasterio>=1.3",
-    "opencv-python>=4.8",
-    "Pillow>=9",
-    "matplotlib>=3.7",
-    "psutil>=5.9",
-    "PyYAML>=6",
-]
 dev = [
     "ipython",
     "pytest",

@@ -1,0 +1,10 @@
+Metric,Baseline,FieldBCQ
+Precision,60.91,66.24
+Recall,63.30,63.01
+F1,62.09,64.58
+Boundary-F1,40.29,43.22
+Small-parcel recall,30.65,28.77
+Count MAE (instances),3.0115,2.8990
+Matched-parcel area MAPE (%),14.94,14.16
+Foreground-union area WAPE (%),6.56,7.20
+Foreground-union area net bias (%),1.59,-1.19

@@ -1,4 +1,4 @@
-"""CSV and Markdown layouts corresponding exactly to manuscript Tables 4--10."""
+"""CSV and Markdown layouts for legacy evaluation tasks 4--10; see manuscript mapping below."""
 
 import csv
 from pathlib import Path
@@ -6,6 +6,10 @@ from pathlib import Path
 from paper_metrics import aggregate
 
 MODELS = ("Baseline", "A", "B", "C", "A+B", "A+C", "B+C", "FieldBCQ")
+MANUSCRIPT_LOCATIONS = {4: "Table 4; Table S1", 5: "Table 4", 6: "Table 5",
+                        7: "Table 3", 8: "Table S2", 9: "Table S3",
+                        10: "Sections 4.3 and 5.3"}
+
 TITLES = {4: "消融实验分割结果", 5: "边界与结构指标", 6: "同权重关闭与开启质量评分",
           7: "固定阈值检出与数量面积结果", 8: "分来源结果", 9: "分辨率分组结果", 10: "模型复杂度与耗时"}
 FIXED_LABELS = {"precision": "Precision", "recall": "Recall", "f1": "F1", "boundary_f1": "Boundary F1",
@@ -19,16 +23,17 @@ def scaled(value, key):
     return None if value is None else value * (1 if key in {"score_iou_ece", "parcel_count_mae_per_image"} else 100)
 
 
-def table_rows(reports, records, timing, selected):
+def table_rows(reports, records, timing, selected, models=None):
+    models = tuple(models or MODELS)
     tables = {}
     if 4 in selected:
-        tables[4] = [{"配置": m, **{k.replace("_", "–"): v*100 for k, v in reports[m]["native"].items()}} for m in MODELS]
+        tables[4] = [{"配置": m, **{k.replace("_", "–"): v*100 for k, v in reports[m]["native"].items()}} for m in models]
     if 5 in selected:
         keys = ("boundary_f1", "merge_rate", "oversegmentation_rate", "score_iou_ece")
-        tables[5] = [{"配置": m, **{FIXED_LABELS[k]: scaled(reports[m]["fixed"][k], k) for k in keys}} for m in MODELS]
+        tables[5] = [{"配置": m, **{FIXED_LABELS[k]: scaled(reports[m]["fixed"][k], k) for k in keys}} for m in models]
     if 6 in selected:
         if reports["FieldBCQ"]["checkpoint_sha256"] != reports["class"]["checkpoint_sha256"]:
-            raise ValueError("Table 6 must compare the same checkpoint SHA256")
+            raise ValueError("Legacy task 6 (manuscript Table 5) must compare the same checkpoint SHA256")
         rows = []
         for key in ("AP75", "AP50_95", "precision", "recall", "f1", "boundary_f1", "merge_rate",
                     "oversegmentation_rate", "small_parcel_recall", "score_iou_ece"):
@@ -86,7 +91,7 @@ def grouped_results(reports, records, metadata, selected):
 
 def write_tables(output, tables):
     output = Path(output)
-    lines = ["# FieldBCQ 论文表4—10", "", "P、R、F1、AP、召回率、合并率、过分割率与面积相对误差均以百分数表示；ECE使用0—1尺度。差值为百分点，ECE差值保留原尺度；空值记为 —。", ""]
+    lines = ["# FieldBCQ 分割评估任务 4—10", "", "P、R、F1、AP、召回率、合并率、过分割率与面积相对误差均以百分数表示；ECE使用0—1尺度。差值为百分点，ECE差值保留原尺度；空值记为 —。", ""]
     for number, rows in sorted(tables.items()):
         if not rows:
             raise ValueError(f"Table {number} has no rows")
@@ -95,7 +100,8 @@ def write_tables(output, tables):
             writer = csv.DictWriter(handle, columns)
             writer.writeheader()
             writer.writerows(rows)
-        lines += [f"## 表{number} {TITLES[number]}", "", "| " + " | ".join(columns) + " |",
+        lines += [f"## 任务 {number} {TITLES[number]}", "",
+                  f"Current manuscript: {MANUSCRIPT_LOCATIONS[number]}. Legacy output: table{number}.csv.", "", "| " + " | ".join(columns) + " |",
                   "| " + " | ".join("---" for _ in columns) + " |"]
         for row in rows:
             values = ["—" if v is None else f"{v:.5f}" if isinstance(v, float) else str(v) for v in row.values()]

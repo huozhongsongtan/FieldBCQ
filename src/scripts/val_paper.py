@@ -1,4 +1,4 @@
-"""Compute only manuscript Tables 4--10 with the eight round-2 best.pt checkpoints."""
+"""Compute legacy evaluation tasks 4--10 with eight round-2 checkpoints; IDs map to the current manuscript in README.md."""
 
 import argparse
 import hashlib
@@ -9,7 +9,7 @@ from pathlib import Path
 from project_paths import project_path
 from paper_data import load_metadata, resolve_images
 from paper_runtime import benchmark, code_provenance, environment, sha256, write_json
-from paper_tables import MODELS, grouped_results, table_rows, write_tables
+from paper_tables import MODELS, MANUSCRIPT_LOCATIONS, grouped_results, table_rows, write_tables
 from paper_validator import evaluate
 
 FOLDERS = dict(zip(MODELS, ('baseline', 'a', 'b', 'c', 'ab', 'ac', 'bc', 'abc')))
@@ -21,20 +21,29 @@ def parse_args(argv=None):
     parser.add_argument('--weights-root', default='model')
     parser.add_argument('--weights', action='append', default=[], metavar='MODEL=PATH', help='Override one named checkpoint')
     parser.add_argument('--data', default='data/datasets.yaml')
-    parser.add_argument('--metadata-csv', help='External metadata CSV required for tables 8 and 9')
+    parser.add_argument('--metadata-csv', help='External metadata CSV required for legacy tasks 8 and 9')
     parser.add_argument('--project', default='results/tables4_10', help='New output directory; existing directories are rejected')
     parser.add_argument('--device', default='0', help='CUDA index, or cpu for a separately labelled CPU run')
     parser.add_argument('--imgsz', type=int, default=640)
     parser.add_argument('--batch', type=int, default=8)
     parser.add_argument('--workers', type=int, default=4)
-    parser.add_argument('--tables', nargs='+', type=int, choices=range(4, 11), default=list(range(4, 11)))
+    parser.add_argument('--tables', help='Legacy task IDs, not current manuscript table numbers; see README mapping', nargs='+', type=int, choices=range(4, 11), default=list(range(4, 11)))
+    parser.add_argument('--models', nargs='+', choices=MODELS, default=list(MODELS),
+                        help='Configurations to evaluate; default is all eight. Tables 4/5 may use a selected subset.')
     parser.add_argument('--check-only', action='store_true', help='Reject missing/empty/LFS-pointer weights; verify metadata and image/label hashes without inference')
     args = parser.parse_args(argv)
     if args.imgsz <= 0 or args.imgsz % 32 or args.batch < 1 or args.workers < 0:
         parser.error('imgsz must be a positive multiple of 32; batch positive; workers nonnegative')
     args.tables = sorted(set(args.tables))
+    selected = set(args.models)
+    if set(args.tables) & {4, 5} and not selected:
+        parser.error('--models must contain at least one configuration for tables 4 and 5')
+    if set(args.tables) & {6, 7, 8, 9, 10} and not {'Baseline', 'FieldBCQ'}.issubset(selected):
+        parser.error('tables 6-10 require both Baseline and FieldBCQ in --models')
+    if 6 in args.tables and 'FieldBCQ' not in selected:
+        parser.error('table 6 requires FieldBCQ in --models')
     if set(args.tables) & {8, 9} and not args.metadata_csv:
-        parser.error('--metadata-csv is required for tables 8 and 9; use --tables 4 5 6 7 10 without metadata')
+        parser.error('--metadata-csv is required for legacy tasks 8 and 9; use --tables 4 5 6 7 10 without metadata')
     return args
 
 
@@ -57,7 +66,8 @@ def check_weight_file(path):
 
 
 def models_to_run(args):
-    required = set(MODELS) if set(args.tables) & {4, 5} else set()
+    selected = list(args.models)
+    required = set(selected) if set(args.tables) & {4, 5} else set()
     if set(args.tables) & {7, 8, 9, 10}:
         required.update(('Baseline', 'FieldBCQ'))
     if 6 in args.tables:
@@ -74,7 +84,7 @@ def models_to_run(args):
         paths[model] = project_path(path)
     for path in paths.values():
         check_weight_file(path)
-    return [(m, paths[m]) for m in MODELS if m in required]
+    return [(m, paths[m]) for m in selected if m in required]
 
 
 def prepare_dataset(args):
@@ -118,9 +128,11 @@ def main(argv=None):
     if output.exists():
         raise FileExistsError(f'Choose a new --project directory: {output}')
     output.mkdir(parents=True)
-    provenance = dict(version='fieldbcq-tables4-10-v3', status='running', arguments=vars(args),
+    provenance = dict(version='fieldbcq-tables4-10-v3', task_id_scheme='legacy-evaluation-tasks-4-10',
+                      manuscript_locations={str(k): MANUSCRIPT_LOCATIONS[k] for k in args.tables}, status='running', arguments=vars(args),
                       environment=environment(), code=code_provenance(), data_yaml_sha256=sha256(data_path),
                       dataset_content_sha256=digest, dataset_manifest=manifest,
+                      selected_models=args.models,
                       metadata_sha256=sha256(project_path(args.metadata_csv)) if metadata else None,
                       protocol=dict(precision='fp32', rect=True, augment=False, native_conf=0.001, fixed_conf=0.25,
                                     nms_iou=0.70, max_det=710, match_iou=0.5, boundary_tolerance_px=2,
@@ -172,7 +184,7 @@ def main(argv=None):
                                              expected=CONFIGURATIONS[name])
                     timing[name]['checkpoint_sha256'] = sha256(weights)
                 provenance['benchmark'] = timing
-            write_tables(output, table_rows(reports, records, timing, args.tables))
+            write_tables(output, table_rows(reports, records, timing, args.tables, args.models))
         provenance['status'] = 'complete'
     except Exception as exc:
         provenance.update(status='failed', error=f'{type(exc).__name__}: {exc}')

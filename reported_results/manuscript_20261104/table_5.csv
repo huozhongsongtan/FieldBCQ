@@ -1,0 +1,11 @@
+Metric,Class,Joint,Joint − class
+AP75,42.88,43.50,+0.621
+AP50–95,41.50,41.99,+0.492
+Precision,62.72,66.24,+3.523
+Recall,64.97,63.01,-1.968
+F1,63.83,64.58,+0.757
+Boundary-F1,42.55,43.22,+0.667
+Merge rate,8.61,8.37,-0.244
+Oversegmentation rate,9.22,7.86,-1.354
+Small-parcel recall,31.47,28.77,-2.702
+Score–IoU ECE,0.07506,0.05007,-0.02499
