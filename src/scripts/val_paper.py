@@ -29,7 +29,7 @@ def parse_args(argv=None):
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--tables', help='Legacy task IDs, not current manuscript table numbers; see README mapping', nargs='+', type=int, choices=range(4, 11), default=list(range(4, 11)))
     parser.add_argument('--models', nargs='+', choices=MODELS, default=list(MODELS),
-                        help='Configurations to evaluate; default is all eight. Tables 4/5 may use a selected subset.')
+                        help='Configurations to evaluate; default is all eight. Legacy tasks 4/5 may use a selected subset.')
     parser.add_argument('--check-only', action='store_true', help='Reject missing/empty/LFS-pointer weights; verify metadata and image/label hashes without inference')
     args = parser.parse_args(argv)
     if args.imgsz <= 0 or args.imgsz % 32 or args.batch < 1 or args.workers < 0:
@@ -37,11 +37,11 @@ def parse_args(argv=None):
     args.tables = sorted(set(args.tables))
     selected = set(args.models)
     if set(args.tables) & {4, 5} and not selected:
-        parser.error('--models must contain at least one configuration for tables 4 and 5')
+        parser.error('--models must contain at least one configuration for legacy tasks 4 and 5')
     if set(args.tables) & {6, 7, 8, 9, 10} and not {'Baseline', 'FieldBCQ'}.issubset(selected):
-        parser.error('tables 6-10 require both Baseline and FieldBCQ in --models')
+        parser.error('legacy tasks 6-10 require both Baseline and FieldBCQ in --models')
     if 6 in args.tables and 'FieldBCQ' not in selected:
-        parser.error('table 6 requires FieldBCQ in --models')
+        parser.error('legacy task 6 (manuscript Table 5) requires FieldBCQ in --models')
     if set(args.tables) & {8, 9} and not args.metadata_csv:
         parser.error('--metadata-csv is required for legacy tasks 8 and 9; use --tables 4 5 6 7 10 without metadata')
     return args

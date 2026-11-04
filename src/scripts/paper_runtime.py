@@ -147,7 +147,7 @@ def attach_training_metadata(model, stage, cli_args, train_args):
 
 def benchmark(weights, imgsz=640, device="0", image=None, quality_mode=None,
               expected=None, warmup=50, iterations=200):
-    """Table 10 only: FP32, batch one, 2*THOP MACs, synchronized mean latencies."""
+    """Legacy task 10 (Section 3.3): FP32, batch one, 2*MACs, synchronized timing."""
     import copy
     import numpy as np
     import torch
@@ -156,7 +156,7 @@ def benchmark(weights, imgsz=640, device="0", image=None, quality_mode=None,
     from ultralytics.utils.torch_utils import select_device
 
     if image is None or image.ndim != 3 or image.shape[2] != 3:
-        raise ValueError("Table 10 requires a decoded real BGR image")
+        raise ValueError("Legacy task 10 requires a decoded real BGR image")
     if warmup < 0 or iterations < 1:
         raise ValueError("Invalid benchmark iteration count")
     selected = select_device(device, verbose=False)

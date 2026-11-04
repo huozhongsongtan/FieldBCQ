@@ -8,7 +8,7 @@ from paper_metrics import aggregate
 MODELS = ("Baseline", "A", "B", "C", "A+B", "A+C", "B+C", "FieldBCQ")
 MANUSCRIPT_LOCATIONS = {4: "Table 4; Table S1", 5: "Table 4", 6: "Table 5",
                         7: "Table 3", 8: "Table S2", 9: "Table S3",
-                        10: "Sections 4.3 and 5.3"}
+                        10: "Section 3.3; measurement protocol in Section 2.6.2"}
 
 TITLES = {4: "消融实验分割结果", 5: "边界与结构指标", 6: "同权重关闭与开启质量评分",
           7: "固定阈值检出与数量面积结果", 8: "分来源结果", 9: "分辨率分组结果", 10: "模型复杂度与耗时"}

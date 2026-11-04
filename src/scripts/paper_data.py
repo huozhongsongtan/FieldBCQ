@@ -1,4 +1,4 @@
-"""Dataset/grid helpers for Tables 4--10."""
+"""Dataset/grid helpers for legacy evaluation tasks 4--10 (see README mapping)."""
 
 import csv
 import math
